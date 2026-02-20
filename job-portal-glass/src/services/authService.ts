@@ -1,0 +1,119 @@
+/**
+ * Auth Service – Strictly typed API layer for authentication.
+ * Base URL: /api/v1 (use env NEXT_PUBLIC_API_URL or relative proxy).
+ * All responses follow: { success: boolean; data: T | { error: string | object } }
+ */
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T | { error: string | Record<string, unknown> };
+}
+
+/** Extract error message from API response. Handles string or object (e.g. { email: "invalid" }). */
+function getErrorMessage(data: { error?: string | Record<string, unknown> }): string {
+  const err = data.error;
+  if (typeof err === "string") return err;
+  if (err && typeof err === "object") {
+    const parts = Object.entries(err).map(([k, v]) => (Array.isArray(v) ? v.join(", ") : String(v)));
+    return parts.length ? parts.join(". ") : "An error occurred";
+  }
+  return "An error occurred";
+}
+
+async function handleResponse<T>(res: Response): Promise<T> {
+  const json: ApiResponse<T> = await res.json();
+  if (!json.success) {
+    const msg = getErrorMessage((json.data || {}) as { error?: string | Record<string, unknown> });
+    throw new Error(msg);
+  }
+  return json.data as T;
+}
+
+export type OtpReason = "signup" | "forget password";
+
+/** POST /auth/req_email_otp – Request OTP for signup or forgot password. */
+export async function requestOtp(email: string, reason: OtpReason): Promise<void> {
+  const res = await fetch(`${API_BASE}/auth/req_email_otp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, reason }),
+  });
+  await handleResponse<unknown>(res);
+}
+
+export interface SignupPayload {
+  name: string;
+  email: string;
+  password: string;
+  otp: string;
+}
+
+/** POST /auth/signup – Complete signup with OTP. Returns user + cookies (logged in). */
+export async function signup(payload: SignupPayload): Promise<unknown> {
+  const res = await fetch(`${API_BASE}/auth/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...payload,
+      otp: String(payload.otp),
+    }),
+    credentials: "include",
+  });
+  return handleResponse<unknown>(res);
+}
+
+export interface SigninPayload {
+  email: string;
+  password: string;
+}
+
+/** POST /auth/login – Sign in. Returns user + sets session_token cookie. */
+export async function signin(payload: SigninPayload): Promise<unknown> {
+  const res = await fetch(`${API_BASE}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    credentials: "include",
+  });
+  return handleResponse<unknown>(res);
+}
+
+export interface ForgotPasswordPayload {
+  email: string;
+  otp: string;
+  new_password: string;
+}
+
+/** POST /auth/forgot_password – Finalize forgot password with OTP. */
+export async function verifyForgot(payload: ForgotPasswordPayload): Promise<unknown> {
+  const res = await fetch(`${API_BASE}/auth/forgot_password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...payload, otp: String(payload.otp) }),
+    credentials: "include",
+  });
+  return handleResponse<unknown>(res);
+}
+
+export type SocialProvider = "google" | "linkedin";
+
+/** POST /auth/logout – Sign out. Clears session cookie. */
+export async function logout(): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/auth/logout`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+  });
+  const data = await handleResponse<{ message: string }>(res);
+  return data as { message: string };
+}
+
+/** GET /auth/google or /auth/linkedin – Get redirect URL for social login. */
+export async function getSocialLink(provider: SocialProvider): Promise<string> {
+  const path = provider === "google" ? "/auth/google" : "/auth/linkedin";
+  const res = await fetch(`${API_BASE}${path}`, { credentials: "include" });
+  const data = await handleResponse<{ url: string }>(res);
+  return (data as { url: string }).url;
+}
