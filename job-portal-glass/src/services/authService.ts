@@ -31,17 +31,30 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return json.data as T;
 }
 
-export type OtpReason = "signup" | "forget password";
+/** Backend expects: "signup" | "forget password" | "change email" | "delete account" | "change password" */
+export type OtpOption =
+  | "signup"
+  | "forget password"
+  | "change email"
+  | "delete account"
+  | "change password";
 
-/** POST /auth/req_email_otp – Request OTP for signup or forgot password. */
-export async function requestOtp(email: string, reason: OtpReason): Promise<void> {
+/** POST /auth/req_email_otp – Request OTP. Sends { email, option } per backend Zod schema. */
+export async function reqEmailOtp(email: string, option?: string): Promise<void> {
+  const payload = {
+    email,
+    reason: option || "signup",
+  };
   const res = await fetch(`${API_BASE}/auth/req_email_otp`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, reason }),
+    body: JSON.stringify(payload),
   });
   await handleResponse<unknown>(res);
 }
+
+/** Alias for reqEmailOtp. */
+export const requestOtp = reqEmailOtp;
 
 export interface SignupPayload {
   name: string;
@@ -108,6 +121,29 @@ export async function logout(): Promise<{ message: string }> {
   });
   const data = await handleResponse<{ message: string }>(res);
   return data as { message: string };
+}
+
+export interface ChangeEmailPayload {
+  old_email: string;
+  new_email: string;
+  otp_old_email: string;
+  otp_new_email: string;
+}
+
+/** POST /auth/change_email – Change email. Destroys session; user must re-login. */
+export async function changeEmail(payload: ChangeEmailPayload): Promise<unknown> {
+  const res = await fetch(`${API_BASE}/auth/change_email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      old_email: payload.old_email,
+      new_email: payload.new_email,
+      otp_old_email: String(payload.otp_old_email),
+      otp_new_email: String(payload.otp_new_email),
+    }),
+    credentials: "include",
+  });
+  return handleResponse<unknown>(res);
 }
 
 /** GET /auth/google or /auth/linkedin – Get redirect URL for social login. */

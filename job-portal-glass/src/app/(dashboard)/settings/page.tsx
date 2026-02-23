@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
+import { changeEmail, reqEmailOtp } from "@/services/authService";
+import { useProfileStore } from "@/store/useProfileStore";
 
 type Tab = "account" | "security";
 
@@ -9,8 +12,23 @@ const inputElite =
   "h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white placeholder:text-zinc-500 outline-none transition-all focus:border-white/20 focus:ring-1 focus:ring-white/20 disabled:opacity-50 disabled:cursor-not-allowed";
 
 export default function SettingsPage() {
+  const router = useRouter();
+  const user = useProfileStore((s) => s.user);
+  const clearProfile = useProfileStore((s) => s.clearProfile);
+
   const [activeTab, setActiveTab] = useState<Tab>("account");
-  const [emailStep, setEmailStep] = useState<"input" | "otp">("input");
+  const [currentEmail, setCurrentEmail] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [otpOldEmail, setOtpOldEmail] = useState("");
+  const [otpNewEmail, setOtpNewEmail] = useState("");
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailToast, setEmailToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.email) setCurrentEmail(user.email);
+  }, [user?.email]);
+
   const [deleteStep, setDeleteStep] = useState<"input" | "otp">("input");
   const [passwordStep, setPasswordStep] = useState<"input" | "otp">("input");
   const [phoneStep, setPhoneStep] = useState<"input" | "otp">("input");
@@ -62,55 +80,70 @@ export default function SettingsPage() {
                   Transfer all your data and account-related communications to a new email address.
                 </p>
 
+                {emailToast && (
+                  <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
+                    {emailToast}
+                  </div>
+                )}
+                {emailError && (
+                  <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                    {emailError}
+                  </div>
+                )}
+
                 <form
                   id="change-email-form"
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault();
-                    if (emailStep === "input") {
-                      setEmailStep("otp");
-                      console.log("Send Verification Codes clicked");
-                    } else {
-                      console.log("Verify & Save Email submitted");
+                    setEmailError(null);
+                    setEmailLoading(true);
+                    try {
+                      await changeEmail({
+                        old_email: currentEmail.trim(),
+                        new_email: newEmail.trim(),
+                        otp_old_email: otpOldEmail,
+                        otp_new_email: otpNewEmail,
+                      });
+                      clearProfile();
+                      setEmailToast("Email updated! Please log in again.");
+                      setTimeout(() => setEmailToast(null), 3000);
+                      router.push("/signin");
+                    } catch (err) {
+                      setEmailError(err instanceof Error ? err.message : "Failed to change email.");
+                    } finally {
+                      setEmailLoading(false);
                     }
                   }}
                   className="mt-8 space-y-5"
                 >
-                  {/* Step 1: Email inputs only */}
-                  {(emailStep === "input" || emailStep === "otp") && (
-                    <div className="space-y-5">
-                      <div className="space-y-2">
-                        <label htmlFor="current-email" className="block text-sm font-medium text-zinc-400">
-                          Current Email
-                        </label>
-                        <input
-                          id="current-email"
-                          type="email"
-                          placeholder="you@example.com"
-                          disabled={emailStep === "otp"}
-                          readOnly={emailStep === "otp"}
-                          aria-readonly={emailStep === "otp"}
-                          className={inputElite}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label htmlFor="new-email" className="block text-sm font-medium text-zinc-400">
-                          New Email
-                        </label>
-                        <input
-                          id="new-email"
-                          type="email"
-                          placeholder="new@example.com"
-                          disabled={emailStep === "otp"}
-                          readOnly={emailStep === "otp"}
-                          aria-readonly={emailStep === "otp"}
-                          className={inputElite}
-                        />
-                      </div>
+                  <div className="space-y-5">
+                    <div className="space-y-2">
+                      <label htmlFor="current-email" className="block text-sm font-medium text-zinc-400">
+                        Current Email
+                      </label>
+                      <input
+                        id="current-email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={currentEmail}
+                        readOnly
+                        aria-readonly
+                        className={inputElite}
+                      />
                     </div>
-                  )}
-
-                  {/* Step 2: OTP fields (revealed after "Send Verification Codes") */}
-                  {emailStep === "otp" && (
+                    <div className="space-y-2">
+                      <label htmlFor="new-email" className="block text-sm font-medium text-zinc-400">
+                        New Email
+                      </label>
+                      <input
+                        id="new-email"
+                        type="email"
+                        placeholder="new@example.com"
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        className={inputElite}
+                      />
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label htmlFor="otp-current-email" className="block text-sm font-medium text-zinc-400">
@@ -122,6 +155,8 @@ export default function SettingsPage() {
                           inputMode="numeric"
                           placeholder="000000"
                           maxLength={6}
+                          value={otpOldEmail}
+                          onChange={(e) => setOtpOldEmail(e.target.value.replace(/\D/g, ""))}
                           className={inputElite}
                         />
                       </div>
@@ -135,22 +170,58 @@ export default function SettingsPage() {
                           inputMode="numeric"
                           placeholder="000000"
                           maxLength={6}
+                          value={otpNewEmail}
+                          onChange={(e) => setOtpNewEmail(e.target.value.replace(/\D/g, ""))}
                           className={inputElite}
                         />
                       </div>
                     </div>
-                  )}
-
-                  <div className="pt-2">
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const old = currentEmail.trim();
+                        const neu = newEmail.trim();
+                        if (!old || !neu) {
+                          setEmailError("Please enter both current and new email.");
+                          return;
+                        }
+                        if (old === neu) {
+                          setEmailError("New email must be different from current email.");
+                          return;
+                        }
+                        setEmailError(null);
+                        setEmailLoading(true);
+                        try {
+                          await Promise.all([
+                            reqEmailOtp(old, "change email"),
+                            reqEmailOtp(neu, "change email"),
+                          ]);
+                          setEmailToast("Codes sent to both emails!");
+                          setTimeout(() => setEmailToast(null), 4000);
+                        } catch (err) {
+                          setEmailError(err instanceof Error ? err.message : "Failed to send codes.");
+                        } finally {
+                          setEmailLoading(false);
+                        }
+                      }}
+                      disabled={emailLoading}
+                      className="rounded-xl bg-white/10 px-6 py-3 text-sm font-medium text-white transition hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {emailLoading ? "Sending…" : "Send Verification Codes"}
+                    </button>
                     <button
                       type="submit"
                       form="change-email-form"
-                      suppressHydrationWarning
-                      className="h-12 rounded-xl bg-white px-6 text-sm font-medium text-black transition-colors hover:bg-zinc-200"
+                      disabled={
+                        emailLoading ||
+                        otpOldEmail.length !== 6 ||
+                        otpNewEmail.length !== 6
+                      }
+                      className="h-12 rounded-xl bg-white px-6 text-sm font-medium text-black transition-colors hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {emailStep === "input"
-                        ? "Send Verification Codes"
-                        : "Verify & Save Email"}
+                      {emailLoading ? "Verifying…" : "Verify & Save Email"}
                     </button>
                   </div>
                 </form>

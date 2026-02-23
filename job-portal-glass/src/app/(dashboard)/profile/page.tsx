@@ -8,12 +8,13 @@ import { AddWorkModal } from "@/features/profile/components/AddWorkModal";
 import { AddEducationModal } from "@/features/profile/components/AddEducationModal";
 import { ExperienceTimeline } from "@/features/profile/components/ExperienceTimeline";
 import { EducationTimeline } from "@/features/profile/components/EducationTimeline";
+import { WorkPreferencesCard } from "@/features/profile/components/WorkPreferencesCard";
 import { useProfileStore } from "@/store/useProfileStore";
 import { userService } from "@/services/userService";
 import { isApiSuccess, getApiErrorMessage } from "@/lib/validations/api";
 import type { WorkItem, EducationItem } from "@/lib/validations/user";
 
-type Tab = "experience" | "education";
+type Tab = "experience" | "education" | "preferences";
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<Tab>("experience");
@@ -95,6 +96,18 @@ export default function ProfilePage() {
               >
                 Education
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("preferences")}
+                suppressHydrationWarning
+                className={`pb-4 text-sm font-medium transition-colors ${
+                  activeTab === "preferences"
+                    ? "-mb-px border-b-2 border-white text-white"
+                    : "text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                Work Preferences
+              </button>
             </div>
 
             {/* Tab Content */}
@@ -134,6 +147,11 @@ export default function ProfilePage() {
                   }}
                   onDeleteClick={handleDeleteEducation}
                 />
+              </div>
+            )}
+            {activeTab === "preferences" && (
+              <div className="mt-6">
+                <WorkPreferencesCard />
               </div>
             )}
           </div>

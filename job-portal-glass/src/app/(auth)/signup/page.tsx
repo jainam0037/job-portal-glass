@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Mail, Hash, User, Lock, ArrowLeft } from "lucide-react";
 import { GlassInput } from "@/components/ui/GlassInput";
 import { SocialButtons } from "@/components/auth/SocialButtons";
-import { requestOtp, signup } from "@/services/authService";
+import { reqEmailOtp, signup } from "@/services/authService";
 import { useProfileStore } from "@/store/useProfileStore";
 
 export default function SignupPage() {
@@ -27,7 +27,7 @@ export default function SignupPage() {
     setError(null);
     setIsLoading(true);
     try {
-      await requestOtp(trimmed, "signup");
+      await reqEmailOtp(trimmed, "signup");
       setEmail(trimmed);
       setStep(2);
     } catch (err) {
@@ -62,7 +62,7 @@ export default function SignupPage() {
         name: trimmedName,
         email: trimmedEmail,
       });
-      router.push("/profile");
+      router.push("/onboarding");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign up failed. Please try again.");
     } finally {

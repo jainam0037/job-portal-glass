@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PROTECTED_ROUTES = ["/profile", "/jobs", "/settings", "/agent", "/alerts"];
+const PROTECTED_ROUTES = ["/profile", "/jobs", "/settings", "/agent", "/alerts", "/onboarding"];
 const AUTH_ROUTES = ["/signin", "/signup", "/forgot-password"];
 
 function isProtectedPath(pathname: string): boolean {

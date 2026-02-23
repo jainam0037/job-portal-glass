@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Check, Mail, Hash, Lock } from "lucide-react";
 import { GlassInput } from "@/components/ui/GlassInput";
 import { AuthLayout } from "@/features/auth";
-import { requestOtp, verifyForgot } from "@/services/authService";
+import { reqEmailOtp, verifyForgot } from "@/services/authService";
 
 const RESEND_COOLDOWN_SEC = 30;
 
@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
     setError(null);
     setIsLoading(true);
     try {
-      await requestOtp(trimmed, "forget password");
+      await reqEmailOtp(trimmed, "forget password");
       setEmail(trimmed);
       setStep("reset");
       setResendTimer(RESEND_COOLDOWN_SEC);
@@ -55,7 +55,7 @@ export default function ForgotPasswordPage() {
     setError(null);
     setIsLoading(true);
     try {
-      await requestOtp(email, "forget password");
+      await reqEmailOtp(email, "forget password");
       setResendTimer(RESEND_COOLDOWN_SEC);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to resend OTP. Please try again.");
