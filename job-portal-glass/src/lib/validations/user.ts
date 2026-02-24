@@ -161,3 +161,13 @@ export const getUserResponseSchema = z.object({
 });
 
 export type GetUserResponse = z.infer<typeof getUserResponseSchema>;
+
+/** POST /user/profile response – upload profile image returns profile_img URL */
+export const uploadProfileImageResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    profile_img: z.string().url(),
+  }),
+});
+
+export type UploadProfileImageResponse = z.infer<typeof uploadProfileImageResponseSchema>;

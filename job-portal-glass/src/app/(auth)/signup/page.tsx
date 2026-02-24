@@ -15,7 +15,8 @@ export default function SignupPage() {
   const [step, setStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,8 +41,9 @@ export default function SignupPage() {
   const handleStep2 = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedEmail = email.trim();
-    const trimmedName = name.trim();
-    if (!trimmedEmail || !trimmedName || !password || !otp || otp.length !== 6) {
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+    if (!trimmedEmail || !trimmedFirstName || !trimmedLastName || !password || !otp || otp.length !== 6) {
       setError("Please fill all fields. OTP must be 6 digits.");
       return;
     }
@@ -53,13 +55,14 @@ export default function SignupPage() {
     setIsLoading(true);
     try {
       await signup({
-        name: trimmedName,
+        first_name: trimmedFirstName,
+        last_name: trimmedLastName,
         email: trimmedEmail,
         password,
         otp,
       });
       setUserFromAuth({
-        name: trimmedName,
+        name: `${trimmedFirstName} ${trimmedLastName}`.trim(),
         email: trimmedEmail,
       });
       router.push("/onboarding");
@@ -168,21 +171,39 @@ export default function SignupPage() {
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label htmlFor="fullName" className="text-sm font-semibold text-zinc-300 ml-1">
-                  Full Name
-                </label>
-                <GlassInput
-                  id="fullName"
-                  name="fullName"
-                  icon={<User className="h-4 w-4" />}
-                  placeholder="John Doe"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  className="bg-black/40 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="firstName" className="text-sm font-semibold text-zinc-300 ml-1">
+                    First Name
+                  </label>
+                  <GlassInput
+                    id="firstName"
+                    name="firstName"
+                    icon={<User className="h-4 w-4" />}
+                    placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="bg-black/40 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="lastName" className="text-sm font-semibold text-zinc-300 ml-1">
+                    Last Name
+                  </label>
+                  <GlassInput
+                    id="lastName"
+                    name="lastName"
+                    icon={<User className="h-4 w-4" />}
+                    placeholder="Doe"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="bg-black/40 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">

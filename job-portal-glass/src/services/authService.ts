@@ -57,7 +57,8 @@ export async function reqEmailOtp(email: string, option?: string): Promise<void>
 export const requestOtp = reqEmailOtp;
 
 export interface SignupPayload {
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   password: string;
   otp: string;

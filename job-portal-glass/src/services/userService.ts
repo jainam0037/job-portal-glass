@@ -107,11 +107,11 @@ export async function deleteResume() {
   });
 }
 
-/** POST /user/profile - upload profile image (FormData) */
+/** POST /user/profile - upload profile image (FormData). Returns { profile_img: string }. */
 export async function uploadProfileImage(file: File) {
   const formData = new FormData();
   formData.append("profile", file);
-  return apiFetch<{ profile: string }>("/user/profile", {
+  return apiFetch<{ profile_img: string }>("/user/profile", {
     method: "POST",
     body: formData,
   });

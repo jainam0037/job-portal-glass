@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useDropzone, type FileRejection } from "react-dropzone";
 import { Eye, FileText, Trash2, Code, Pencil, Loader2 } from "lucide-react";
 import { useProfileStore } from "@/store/useProfileStore";
@@ -9,21 +9,27 @@ import { isApiSuccess, getApiErrorMessage } from "@/lib/validations/api";
 
 const cardBase = "rounded-2xl border border-white/10 bg-white/[0.02] p-6";
 
-function formatRelativeTime(timestamp: number): string {
-  const sec = Math.floor((Date.now() - timestamp) / 1000);
-  if (sec < 60) return "Just now";
-  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
-  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
-  if (sec < 2592000) return `${Math.floor(sec / 86400)}d ago`;
-  return `${Math.floor(sec / 2592000)}mo ago`;
-}
-
 export function ProfileMetadataSidebar() {
   const { user, setUserResume, setEditing } = useProfileStore();
+  const [existingResume, setExistingResume] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [resumeToast, setResumeToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  const resume = user?.resume ? { url: user.resume, name: "Resume", uploadedAt: Date.now() } : null;
+  useEffect(() => {
+    async function fetchProfile() {
+      const res = await userService.getUser();
+      if (isApiSuccess(res) && res.data.user) {
+        const resumeUrl = res.data.user.resume ?? null;
+        setExistingResume(resumeUrl);
+      }
+    }
+    fetchProfile();
+  }, []);
+
+  useEffect(() => {
+    setExistingResume(user?.resume ?? null);
+  }, [user?.resume]);
 
   const RESUME_ACCEPT = {
     "application/pdf": [".pdf"],
@@ -50,8 +56,13 @@ export function ProfileMetadataSidebar() {
             : typeof res.data === "string"
               ? res.data
               : null;
-          setUserResume(url);
-          showToast("success", "Resume uploaded successfully.");
+          if (url) {
+            setUserResume(url);
+            setExistingResume(url);
+            showToast("success", "Resume uploaded successfully.");
+          } else {
+            showToast("error", "Invalid response from server.");
+          }
         } else {
           showToast("error", getApiErrorMessage(res.data));
         }
@@ -77,20 +88,26 @@ export function ProfileMetadataSidebar() {
     accept: RESUME_ACCEPT,
     maxFiles: 1,
     maxSize: 5 * 1024 * 1024,
-    disabled: !!resume || isUploading,
+    disabled: !!existingResume || isUploading,
   });
 
   const handleDeleteResume = useCallback(async () => {
-    if (resume?.url && resume.url.startsWith("blob:")) URL.revokeObjectURL(resume.url);
+    if (existingResume?.startsWith("blob:")) URL.revokeObjectURL(existingResume);
     setResumeToast(null);
-    const res = await userService.deleteResume();
-    if (isApiSuccess(res)) {
-      setUserResume(null);
-    } else {
-      setResumeToast({ type: "error", message: getApiErrorMessage(res.data) });
-      setTimeout(() => setResumeToast(null), 4000);
+    setIsDeleting(true);
+    try {
+      const res = await userService.deleteResume();
+      if (isApiSuccess(res)) {
+        setUserResume(null);
+        setExistingResume(null);
+      } else {
+        setResumeToast({ type: "error", message: getApiErrorMessage(res.data) });
+        setTimeout(() => setResumeToast(null), 4000);
+      }
+    } finally {
+      setIsDeleting(false);
     }
-  }, [resume?.url, setUserResume]);
+  }, [existingResume, setUserResume]);
 
   const skills = user?.skills ?? [];
   const languages = user?.languages ?? [];
@@ -115,41 +132,35 @@ export function ProfileMetadataSidebar() {
             {resumeToast.message}
           </div>
         )}
-        {resume ? (
-          <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-500/20">
-              <FileText className="h-5 w-5 text-red-500" />
+        {existingResume ? (
+          <div className="flex flex-col items-center gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-6">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20">
+              <FileText className="h-6 w-6 text-emerald-400" />
             </div>
-            <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-white">Resume Uploaded</p>
+            <div className="flex w-full items-center justify-center gap-3">
               <a
-                href={resume.url}
+                href={existingResume}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block truncate text-sm font-medium text-white underline-offset-2 hover:text-indigo-300 hover:underline"
-              >
-                {resume.name}
-              </a>
-              <p className="mt-0.5 text-xs text-zinc-500">
-                Updated {formatRelativeTime(resume.uploadedAt)}
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <a
-                href={resume.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-white/5 hover:text-indigo-400"
-                aria-label="Preview resume"
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-500/20 px-4 py-2.5 text-sm font-medium text-indigo-300 transition-colors hover:bg-indigo-500/30 hover:text-indigo-200"
               >
                 <Eye className="h-4 w-4" />
+                View / Download
               </a>
               <button
                 type="button"
                 onClick={handleDeleteResume}
-                className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-white/5 hover:text-red-400"
+                disabled={isDeleting}
+                className="inline-flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800/50 px-4 py-2.5 text-sm font-medium text-zinc-400 transition-colors hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
                 aria-label="Delete resume"
               >
-                <Trash2 className="h-4 w-4" />
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                Delete
               </button>
             </div>
           </div>

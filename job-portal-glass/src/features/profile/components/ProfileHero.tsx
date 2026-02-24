@@ -123,8 +123,8 @@ export function ProfileHero() {
       try {
         const res = await userService.uploadProfileImage(file);
         if (isApiSuccess(res)) {
-          const url = typeof res.data === "object" && res.data && "profile" in res.data
-            ? (res.data as { profile: string }).profile
+          const url = typeof res.data === "object" && res.data && "profile_img" in res.data
+            ? (res.data as { profile_img: string }).profile_img
             : typeof res.data === "string"
               ? res.data
               : null;

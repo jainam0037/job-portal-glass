@@ -59,7 +59,11 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     set({ isFetching: true, error: null });
     const res = await userService.getUser();
     if (isApiSuccess(res)) {
+      const raw = res.data.user as Record<string, unknown>;
       const user = res.data.user;
+      // Map backend field variants → our schema (profile_img, resume)
+      const profile_img = (raw.profile_img ?? raw.url_to_img ?? raw.profile ?? user.profile_img) as string | null | undefined;
+      const resume = (raw.resume ?? raw.resume_url ?? user.resume) as string | null | undefined;
       // Normalize _id → id (MongoDB/backend often returns _id)
       const experience = (user.experience ?? []).map((w) => ({
         ...w,
@@ -70,7 +74,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         id: e.id ?? (e as unknown as { _id?: string })._id ?? String(Math.random()),
       }));
       set({
-        user: { ...user, experience, education },
+        user: { ...user, profile_img: profile_img ?? null, resume: resume ?? null, experience, education },
         error: null,
       });
     } else {
