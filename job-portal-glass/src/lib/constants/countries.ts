@@ -68,3 +68,13 @@ export function getCountryLabel(isoCode: string | undefined): string {
   if (!isoCode) return "";
   return COUNTRIES.find((c) => c.value === isoCode)?.label ?? isoCode;
 }
+
+/** Normalize country to ISO 2-letter code. Accepts full name or ISO code. */
+export function getCountryCode(labelOrCode: string | undefined): string {
+  if (!labelOrCode?.trim()) return "";
+  const trimmed = labelOrCode.trim();
+  const byValue = COUNTRIES.find((c) => c.value === trimmed);
+  if (byValue) return byValue.value;
+  const byLabel = COUNTRIES.find((c) => c.label.toLowerCase() === trimmed.toLowerCase());
+  return byLabel?.value ?? trimmed;
+}

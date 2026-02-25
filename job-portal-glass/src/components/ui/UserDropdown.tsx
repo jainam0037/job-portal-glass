@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { getDisplayName } from "@/lib/validations/user";
 import { useProfileStore } from "@/store/useProfileStore";
 import { logout as authLogout } from "@/services/authService";
 import Link from "next/link";
@@ -71,7 +72,7 @@ export function UserDropdown({ placement = "left" }: UserDropdownProps = {}) {
     }
   };
 
-  const initials = getInitials(user?.name ?? "", user?.email ?? "");
+  const initials = getInitials(getDisplayName(user), user?.email ?? "");
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
 
   useLayoutEffect(() => {
@@ -114,8 +115,8 @@ export function UserDropdown({ placement = "left" }: UserDropdownProps = {}) {
     >
           <div className="px-4 pb-2">
             <p className="text-xs text-zinc-500">Signed in as</p>
-            {user?.name && (
-              <p className="truncate text-sm font-medium text-white">{user.name}</p>
+            {getDisplayName(user) && (
+              <p className="truncate text-sm font-medium text-white">{getDisplayName(user)}</p>
             )}
             <p className="truncate text-xs text-zinc-400">
               {user?.email || "No email"}

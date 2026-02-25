@@ -116,7 +116,7 @@ export function ProfileMetadataSidebar() {
     <aside className="flex flex-col gap-6">
       {/* Card A: Resume Dropzone */}
       <div className={cardBase}>
-        <h3 className="mb-4 flex items-center gap-2 text-sm font-medium text-white">
+        <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-white">
           <FileText className="h-4 w-4" />
           Resume
         </h3>
@@ -133,17 +133,17 @@ export function ProfileMetadataSidebar() {
           </div>
         )}
         {existingResume ? (
-          <div className="flex flex-col items-center gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-6">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20">
-              <FileText className="h-6 w-6 text-emerald-400" />
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20">
+              <FileText className="h-5 w-5 text-emerald-400" />
             </div>
             <p className="text-sm font-semibold text-white">Resume Uploaded</p>
-            <div className="flex w-full items-center justify-center gap-3">
+            <div className="flex w-full flex-wrap items-center justify-center gap-2">
               <a
                 href={existingResume}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-500/20 px-4 py-2.5 text-sm font-medium text-indigo-300 transition-colors hover:bg-indigo-500/30 hover:text-indigo-200"
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-500/20 px-3 py-2 text-sm font-medium text-indigo-300 transition-colors hover:bg-indigo-500/30 hover:text-indigo-200"
               >
                 <Eye className="h-4 w-4" />
                 View / Download
@@ -152,7 +152,7 @@ export function ProfileMetadataSidebar() {
                 type="button"
                 onClick={handleDeleteResume}
                 disabled={isDeleting}
-                className="inline-flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800/50 px-4 py-2.5 text-sm font-medium text-zinc-400 transition-colors hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800/50 px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
                 aria-label="Delete resume"
               >
                 {isDeleting ? (

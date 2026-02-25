@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { GlassButton } from "@/components/ui/GlassButton";
 import { getCountryLabel } from "@/lib/constants/countries";
+import { getDisplayName } from "@/lib/validations/user";
 import { useProfileStore } from "@/store/useProfileStore";
 import { userService } from "@/services/userService";
 import { isApiSuccess, getApiErrorMessage } from "@/lib/validations/api";
@@ -170,6 +171,7 @@ export function ProfileHero() {
     const isUrl = key === "linkedin";
     const isEmail = key === "email";
     const hasValue = Boolean(value?.trim());
+    const hasValidLink = hasValue && (isUrl ? (value.startsWith("http") || value.includes("linkedin")) : true);
     const displayLabel = hasValue
       ? (isUrl ? formatUrl(value) : isEmail ? formatEmailDisplay(value) : value)
       : (FALLBACK_BY_KEY[key] ?? "");
@@ -181,6 +183,7 @@ export function ProfileHero() {
       isPlaceholder: !hasValue,
       fullLabel: value,
       href: getHref(value),
+      hasValidLink,
     };
   });
 
@@ -233,11 +236,11 @@ export function ProfileHero() {
               {user?.profile_img ? (
                 <img
                   src={user.profile_img}
-                  alt={user?.name ?? ""}
+                  alt={getDisplayName(user)}
                   className="h-full w-full object-cover"
                 />
               ) : (
-                getInitials(user?.name ?? "U")
+                getInitials(getDisplayName(user) || "U")
               )}
               {isBusy && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/60">
@@ -301,7 +304,7 @@ export function ProfileHero() {
           {/* Info */}
           <div className="flex flex-col items-center text-center md:items-start md:text-left">
             <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
-              <h1 className="text-4xl font-bold text-white">{user?.name || "Add your name"}</h1>
+              <h1 className="text-4xl font-bold text-white">{getDisplayName(user) || "Add your name"}</h1>
               <BadgeCheck className="h-8 w-8 shrink-0 text-blue-500" />
               {hasResume && (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
@@ -320,35 +323,66 @@ export function ProfileHero() {
 
             {/* Contact Grid */}
             <div className="mt-6 grid grid-cols-1 gap-x-12 gap-y-3 md:grid-cols-2">
-              {contactItems.map((item) => (
-                <a
-                  key={item.id}
-                  href={item.href}
-                  target={item.href.startsWith("http") ? "_blank" : undefined}
-                  rel={
-                    item.href.startsWith("http")
-                      ? "noopener noreferrer"
-                      : undefined
-                  }
-                  className="group flex min-w-0 cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-zinc-300 transition-all duration-200 hover:bg-white/5 hover:text-white"
-                >
-                  {(() => {
-                    const it = item as { icon: typeof Mail; iconColor: string };
-                    const Icon = it.icon;
-                    return (
-                      <Icon
-                        className={`h-5 w-5 shrink-0 ${it.iconColor}`}
-                      />
-                    );
-                  })()}
-                  <span
-                    className={`max-w-full truncate group-hover:text-white ${item.isPlaceholder ? "opacity-50 text-zinc-500" : ""}`}
-                    title={item.isPlaceholder ? undefined : item.fullLabel}
+              {contactItems.map((item) => {
+                const it = item as { icon: typeof Mail; iconColor: string; hasValidLink?: boolean };
+                const Icon = it.icon;
+                const baseClasses = "group flex min-w-0 items-center gap-3 rounded-lg px-3 py-2 text-zinc-300 transition-all duration-200";
+                const activeClasses = "cursor-pointer hover:bg-white/5 hover:text-white";
+                const disabledClasses = "cursor-not-allowed opacity-50";
+
+                if (item.id === "email") {
+                  return (
+                    <div key={item.id} className={baseClasses}>
+                      <Icon className={`h-5 w-5 shrink-0 ${it.iconColor}`} />
+                      <span
+                        className={`max-w-full truncate ${item.isPlaceholder ? "opacity-50 text-zinc-500" : ""}`}
+                        title={item.isPlaceholder ? undefined : item.fullLabel}
+                      >
+                        {item.label}
+                      </span>
+                    </div>
+                  );
+                }
+
+                if (it.hasValidLink && item.href) {
+                  return (
+                    <a
+                      key={item.id}
+                      href={item.href}
+                      target={item.href.startsWith("http") ? "_blank" : undefined}
+                      rel={
+                        item.href.startsWith("http")
+                          ? "noopener noreferrer"
+                          : undefined
+                      }
+                      className={`${baseClasses} ${activeClasses}`}
+                    >
+                      <Icon className={`h-5 w-5 shrink-0 ${it.iconColor}`} />
+                      <span
+                        className={`max-w-full truncate group-hover:text-white ${item.isPlaceholder ? "opacity-50 text-zinc-500" : ""}`}
+                        title={item.isPlaceholder ? undefined : item.fullLabel}
+                      >
+                        {item.label}
+                      </span>
+                    </a>
+                  );
+                }
+
+                return (
+                  <div
+                    key={item.id}
+                    title={item.isPlaceholder && item.id === "linkedin" ? "Add LinkedIn in Edit Profile" : undefined}
+                    className={`${baseClasses} ${disabledClasses}`}
                   >
-                    {item.label}
-                  </span>
-                </a>
-              ))}
+                    <Icon className={`h-5 w-5 shrink-0 ${it.iconColor}`} />
+                    <span
+                      className={`max-w-full truncate ${item.isPlaceholder ? "opacity-50 text-zinc-500" : ""}`}
+                    >
+                      {item.label}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

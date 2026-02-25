@@ -57,7 +57,9 @@ export type Preference = z.infer<typeof preferenceSchema>;
 // ─── Info (POST /user/info) ───────────────────────────────────────────────
 
 export const infoSchema = z.object({
-  name: z.string().min(1, "Name must not be empty"),
+  first_name: z.string().min(1, "First name must not be empty"),
+  last_name: z.string().min(1, "Last name must not be empty"),
+  phone: e164PhoneSchema.optional(),
   linkedin: urlSchema.optional(),
   links: z.array(urlSchema).optional(),
 });
@@ -124,9 +126,12 @@ export type UpdateEducationPayload = z.infer<typeof updateEducationPayloadSchema
 
 export const userSchema = z.object({
   id: z.string(),
-  name: z.string(),
+  name: z.string().optional(),
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
   email: z.string().email(),
   profile_img: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
   linkedin: z.string().nullable().optional(),
   links: z.array(z.string()).optional(),
   resume: z.string().nullable().optional(),
@@ -161,6 +166,14 @@ export const getUserResponseSchema = z.object({
 });
 
 export type GetUserResponse = z.infer<typeof getUserResponseSchema>;
+
+/** Get display name from user (first_name + last_name, or fallback to name) */
+export function getDisplayName(user: { name?: string; first_name?: string; last_name?: string } | null): string {
+  if (!user) return "";
+  const fromFirstLast = `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim();
+  if (fromFirstLast) return fromFirstLast;
+  return user.name ?? "";
+}
 
 /** POST /user/profile response – upload profile image returns profile_img URL */
 export const uploadProfileImageResponseSchema = z.object({

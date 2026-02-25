@@ -111,6 +111,31 @@ export async function verifyForgot(payload: ForgotPasswordPayload): Promise<unkn
   return handleResponse<unknown>(res);
 }
 
+export interface ChangePasswordPayload {
+  old_password: string;
+  new_password: string;
+  otp: string;
+}
+
+/** POST /auth/change_password – Change password. Destroys session; user must re-login. */
+export async function changePassword(payload: ChangePasswordPayload): Promise<{ success: true; data: unknown } | { success: false; data: { error?: string | Record<string, unknown> } }> {
+  const res = await fetch(`${API_BASE}/auth/change_password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      old_password: payload.old_password,
+      new_password: payload.new_password,
+      otp: String(payload.otp),
+    }),
+    credentials: "include",
+  });
+  const json = await res.json();
+  if (res.ok && json.success) {
+    return { success: true, data: json.data };
+  }
+  return { success: false, data: (json.data || {}) as { error?: string | Record<string, unknown> } };
+}
+
 export type SocialProvider = "google" | "linkedin";
 
 /** POST /auth/logout – Sign out. Clears session cookie. */
@@ -141,6 +166,61 @@ export async function changeEmail(payload: ChangeEmailPayload): Promise<unknown>
       new_email: payload.new_email,
       otp_old_email: String(payload.otp_old_email),
       otp_new_email: String(payload.otp_new_email),
+    }),
+    credentials: "include",
+  });
+  return handleResponse<unknown>(res);
+}
+
+export interface DeleteAccountPayload {
+  email: string;
+  password: string;
+  otp: string;
+}
+
+/** DELETE /auth/delete_account – Permanently delete account. Logs out on success. */
+export async function deleteAccount(payload: DeleteAccountPayload): Promise<{ success: true; data: { message: string } } | { success: false; data: { error?: string | Record<string, unknown> } }> {
+  const res = await fetch(`${API_BASE}/auth/delete_account`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: payload.email,
+      password: payload.password,
+      otp: String(payload.otp),
+    }),
+    credentials: "include",
+  });
+  const json = await res.json();
+  if (res.ok && json.success) {
+    return { success: true, data: json.data as { message: string } };
+  }
+  return { success: false, data: (json.data || {}) as { error?: string | Record<string, unknown> } };
+}
+
+/** POST /auth/req_phone_otp – Request OTP for phone change. Payload: { phone } */
+export async function reqPhoneOtp(phone: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/auth/req_phone_otp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone }),
+    credentials: "include",
+  });
+  await handleResponse<unknown>(res);
+}
+
+export interface ChangePhonePayload {
+  phone: string;
+  otp: string | number;
+}
+
+/** POST /auth/change_phone – Change phone with OTP. */
+export async function changePhone(payload: ChangePhonePayload): Promise<unknown> {
+  const res = await fetch(`${API_BASE}/auth/change_phone`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      phone: payload.phone,
+      otp: typeof payload.otp === "number" ? payload.otp : Number(payload.otp),
     }),
     credentials: "include",
   });

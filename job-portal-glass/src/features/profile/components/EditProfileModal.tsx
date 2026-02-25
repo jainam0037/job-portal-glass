@@ -10,6 +10,7 @@ import {
   LocationGrid,
   type LocationGridValue,
 } from "@/features/profile/components/inputs/LocationGrid";
+import { getCountryCode } from "@/lib/constants/countries";
 import { SUGGESTED_SKILLS, SUGGESTED_LANGUAGES } from "@/lib/constants/data";
 import { parseCurrencyString } from "@/components/ui/CurrencyStringInput";
 import { SearchableTimezoneSelect } from "@/components/ui/SearchableTimezoneSelect";
@@ -25,7 +26,8 @@ function stripLinkedInPrefix(url: string): string {
 }
 
 type FormData = {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   headline: string;
   residence: LocationGridValue;
@@ -48,7 +50,8 @@ type WorkPrefsFormData = {
 function userToFormData(user: User | null): FormData {
   if (!user) {
     return {
-      name: "",
+      firstName: "",
+      lastName: "",
       email: "",
       headline: "",
       residence: { country: "", state: "", city: "" },
@@ -56,12 +59,16 @@ function userToFormData(user: User | null): FormData {
     };
   }
   const headline = user.experience?.[0]?.role ?? "";
+  const nameParts = (user.name ?? "").trim().split(/\s+/);
+  const fallbackFirst = nameParts[0] ?? "";
+  const fallbackLast = nameParts.slice(1).join(" ") ?? "";
   return {
-    name: user.name ?? "",
+    firstName: user.first_name ?? fallbackFirst,
+    lastName: user.last_name ?? fallbackLast,
     email: user.email ?? "",
     headline,
     residence: {
-      country: user.country_residence ?? "",
+      country: getCountryCode(user.country_residence ?? ""),
       state: user.state_residence ?? "",
       city: user.city_residence ?? "",
     },
@@ -88,7 +95,7 @@ function userToWorkPrefsFormData(user: User | null): WorkPrefsFormData {
 
   return {
     workLocation: {
-      country: user?.work_country ?? "",
+      country: getCountryCode(user?.work_country ?? ""),
       state: user?.work_state ?? "",
       city: user?.work_city ?? "",
     },
@@ -156,7 +163,8 @@ export function EditProfileModal() {
 
     const formChanged =
       form &&
-      (form.name !== formData.name ||
+      (form.firstName !== formData.firstName ||
+        form.lastName !== formData.lastName ||
         form.headline !== formData.headline ||
         form.linkedin !== formData.linkedin ||
         form.residence.country !== formData.residence.country ||
@@ -197,84 +205,135 @@ export function EditProfileModal() {
       setSaveError(null);
       setIsSubmitting(true);
 
-      const linkedinVal = formData.linkedin?.trim();
-      const linkedinUrl = linkedinVal
-        ? (linkedinVal.startsWith("http")
-            ? linkedinVal
-            : `https://linkedin.com/in/${stripLinkedInPrefix(linkedinVal)}`)
-        : undefined;
-
-      const infoPayload = {
-        name: (formData.name.trim() || user?.name) ?? "",
-        linkedin: linkedinUrl,
-        links: [] as string[],
-      };
-
-      const locationPayload = {
-        country_residence: formData.residence.country || undefined,
-        state_residence: formData.residence.state || undefined,
-        city_residence: formData.residence.city || undefined,
-        work_country: workPrefsFormData.workLocation.country || undefined,
-        work_state: workPrefsFormData.workLocation.state || undefined,
-        work_city: workPrefsFormData.workLocation.city || undefined,
-        timezone: workPrefsFormData.timezone || undefined,
-        legally_authorised_to_work:
-          workPrefsFormData.workAuth === "unspecified"
-            ? undefined
-            : workPrefsFormData.workAuth === "authorized",
-      };
-
-      const { amount } = parseCurrencyString(workPrefsFormData.compensation);
-      const compNum = amount ? parseInt(amount, 10) : undefined;
-      const tcParsed = workPrefsFormData.timeCommitment
-        ? parseInt(workPrefsFormData.timeCommitment, 10)
-        : undefined;
-      const tcValid = tcParsed != null && !isNaN(tcParsed) && tcParsed >= 1;
-
-      const preferencePayload: Record<string, unknown> = {};
-      if (tcValid) preferencePayload.time_commitment_per_week = tcParsed;
-      if (compNum != null && !isNaN(compNum)) preferencePayload.min_compensation_full_time = compNum;
-      // Always include skills and languages so backend overwrites (empty [] = delete all)
-      preferencePayload.skills = skillsFormData.skills;
-      preferencePayload.languages = skillsFormData.languages;
-
-      const promises: Promise<unknown>[] = [
-        userService.updateInfo(infoPayload),
-        userService.updateLocation(locationPayload),
-      ];
-      if (Object.keys(preferencePayload).length > 0) {
-        promises.push(userService.updatePreferences(preferencePayload as Parameters<typeof userService.updatePreferences>[0]));
-      }
-
       try {
-        const results = await Promise.all(promises);
+        switch (activeTab) {
+          case "profile": {
+            const linkedinVal = formData.linkedin?.trim();
+            const linkedinUrl = linkedinVal
+              ? (linkedinVal.startsWith("http")
+                  ? linkedinVal
+                  : `https://linkedin.com/in/${stripLinkedInPrefix(linkedinVal)}`)
+              : undefined;
 
-        const failed = results.find((r) => !isApiSuccess(r as { success: boolean; data: unknown }));
-        if (failed && !isApiSuccess(failed as { success: boolean; data: unknown })) {
-          const errMsg = getApiErrorMessage((failed as { data: { error?: unknown } }).data);
-          setSaveError(errMsg);
-          setIsSubmitting(false);
-          return;
-        }
+            const infoPayload = {
+              first_name: formData.firstName.trim() || (user?.first_name ?? ""),
+              last_name: formData.lastName.trim() || (user?.last_name ?? ""),
+              linkedin: linkedinUrl,
+              links: (user?.links ?? []) as string[],
+            };
 
-        setUserInfo(infoPayload);
-        setUserLocation(locationPayload);
-        if (Object.keys(preferencePayload).length > 0) {
-          setUserPreferences(preferencePayload as Parameters<typeof setUserPreferences>[0]);
-        }
+            const residenceCountryIso = getCountryCode(formData.residence.country);
+            const locationPayload = {
+              country_residence: residenceCountryIso || undefined,
+              state_residence: formData.residence.state?.trim() || undefined,
+              city_residence: formData.residence.city?.trim() || undefined,
+              work_country: getCountryCode(user?.work_country ?? "") || undefined,
+              work_state: user?.work_state ?? undefined,
+              work_city: user?.work_city ?? undefined,
+              timezone: user?.timezone ?? undefined,
+              legally_authorised_to_work: user?.legally_authorised_to_work,
+            };
 
-        if (formData.headline && user?.experience?.[0]) {
-          const exp = { ...user.experience[0], role: formData.headline };
-          useProfileStore.getState().updateWorkLocal(exp);
-        } else if (formData.headline && !user?.experience?.length) {
-          useProfileStore.getState().addWorkLocal({
-            category: "WORK",
-            name: "Current Role",
-            role: formData.headline,
-            description: "",
-            start_date: "2024-01",
-            end_date: "2024-12",
-          });
+            const [infoRes, locationRes] = await Promise.all([
+              userService.updateInfo(infoPayload),
+              userService.updateLocation(locationPayload),
+            ]);
+
+            if (!isApiSuccess(infoRes)) {
+              setSaveError(getApiErrorMessage(infoRes.data));
+              return;
+            }
+            if (!isApiSuccess(locationRes)) {
+              setSaveError(getApiErrorMessage(locationRes.data));
+              return;
+            }
+
+            setUserInfo(infoPayload);
+            setUserLocation(locationPayload);
+
+            if (formData.headline && user?.experience?.[0]) {
+              const exp = { ...user.experience[0], role: formData.headline };
+              useProfileStore.getState().updateWorkLocal(exp);
+            } else if (formData.headline && !user?.experience?.length) {
+              useProfileStore.getState().addWorkLocal({
+                category: "WORK",
+                name: "Current Role",
+                role: formData.headline,
+                description: "",
+                start_date: "2024-01",
+                end_date: "2024-12",
+              });
+            }
+            break;
+          }
+
+          case "skills": {
+            const preferencePayload = {
+              skills: skillsFormData.skills,
+              languages: skillsFormData.languages,
+            };
+
+            const res = await userService.updatePreferences(
+              preferencePayload as Parameters<typeof userService.updatePreferences>[0]
+            );
+            if (!isApiSuccess(res)) {
+              setSaveError(getApiErrorMessage(res.data));
+              return;
+            }
+            setUserPreferences(preferencePayload as Parameters<typeof setUserPreferences>[0]);
+            break;
+          }
+
+          case "work-preferences": {
+            const { amount } = parseCurrencyString(workPrefsFormData.compensation);
+            const compNum = amount ? parseInt(amount, 10) : undefined;
+            const tcParsed = workPrefsFormData.timeCommitment
+              ? parseInt(workPrefsFormData.timeCommitment, 10)
+              : undefined;
+            const tcValid = tcParsed != null && !isNaN(tcParsed) && tcParsed >= 1;
+
+            const preferencePayload: Record<string, unknown> = {};
+            if (tcValid) preferencePayload.time_commitment_per_week = tcParsed;
+            if (compNum != null && !isNaN(compNum)) preferencePayload.min_compensation_full_time = compNum;
+
+            const workCountryIso = getCountryCode(workPrefsFormData.workLocation.country);
+            const locationPayload = {
+              work_country: workCountryIso || undefined,
+              work_state: workPrefsFormData.workLocation.state?.trim() || undefined,
+              work_city: workPrefsFormData.workLocation.city?.trim() || undefined,
+              timezone: workPrefsFormData.timezone?.trim() || undefined,
+              legally_authorised_to_work:
+                workPrefsFormData.workAuth === "unspecified"
+                  ? undefined
+                  : workPrefsFormData.workAuth === "authorized",
+            };
+
+            const promises: Promise<unknown>[] = [
+              userService.updateLocation(locationPayload),
+            ];
+            if (Object.keys(preferencePayload).length > 0) {
+              promises.push(
+                userService.updatePreferences(preferencePayload as Parameters<typeof userService.updatePreferences>[0])
+              );
+            }
+
+            const results = await Promise.all(promises);
+            const failed = results.find((r) => !isApiSuccess(r as { success: boolean; data: unknown }));
+            if (failed && !isApiSuccess(failed as { success: boolean; data: unknown })) {
+              setSaveError(getApiErrorMessage((failed as { data: { error?: unknown } }).data));
+              return;
+            }
+
+            setUserLocation(locationPayload);
+            if (Object.keys(preferencePayload).length > 0) {
+              setUserPreferences(preferencePayload as Parameters<typeof setUserPreferences>[0]);
+            }
+            break;
+          }
+
+          default:
+            setSaveError("Unknown tab.");
+            return;
         }
 
         setEditing(false);
@@ -285,6 +344,7 @@ export function EditProfileModal() {
       }
     },
     [
+      activeTab,
       formData,
       skillsFormData,
       workPrefsFormData,
@@ -308,10 +368,10 @@ export function EditProfileModal() {
       onClick={handleClose}
     >
       <div
-        className="mx-4 w-full max-w-2xl overflow-visible rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl"
+        className="mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 px-6 py-4">
           <h2 className="text-lg font-semibold text-white">Edit Profile</h2>
           <button
             type="button"
@@ -323,7 +383,7 @@ export function EditProfileModal() {
           </button>
         </div>
 
-        <div className="border-b border-zinc-800 px-6">
+        <div className="shrink-0 border-b border-zinc-800 px-6">
           <nav className="flex gap-6" aria-label="Edit sections">
             {TABS.map(({ id, label }) => (
               <button
@@ -344,87 +404,106 @@ export function EditProfileModal() {
 
         {saveError && (
           <div
-            className="mx-6 mt-4 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400"
+            className="mx-6 mt-4 shrink-0 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400"
             role="alert"
           >
             {saveError}
           </div>
         )}
 
-        <form onSubmit={handleSave}>
+        <form onSubmit={handleSave} className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto">
         {activeTab === "profile" && (
           <div>
-            <div className="grid grid-cols-1 gap-6 p-6 md:grid-cols-2">
-              <div className="space-y-4">
+            <div className="space-y-6 p-6">
+              {/* Row 1: First Name | Last Name side-by-side */}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label htmlFor="name" className="text-sm font-medium text-zinc-400">
-                    Name
+                  <label htmlFor="firstName" className="block text-sm font-medium text-zinc-400">
+                    First Name
                   </label>
                   <GlassInput
-                    id="name"
+                    id="firstName"
                     icon={<User className="h-5 w-5" />}
-                    value={formData.name}
-                    onChange={handleChange("name")}
-                    placeholder="Your name"
+                    value={formData.firstName}
+                    onChange={handleChange("firstName")}
+                    placeholder="John"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="headline" className="text-sm font-medium text-zinc-400">
-                    Headline
+                  <label htmlFor="lastName" className="block text-sm font-medium text-zinc-400">
+                    Last Name
                   </label>
                   <GlassInput
-                    id="headline"
-                    icon={<Briefcase className="h-5 w-5" />}
-                    value={formData.headline}
-                    onChange={handleChange("headline")}
-                    placeholder="e.g. Senior Software Engineer"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-zinc-400">
-                    Location
-                  </label>
-                  <LocationGrid
-                    type="residence"
-                    value={formData.residence}
-                    onChange={(v) => setFormData((prev) => ({ ...prev, residence: v }))}
+                    id="lastName"
+                    icon={<User className="h-5 w-5" />}
+                    value={formData.lastName}
+                    onChange={handleChange("lastName")}
+                    placeholder="Doe"
                   />
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="email" className="text-sm font-medium text-zinc-400">
-                    Email
-                  </label>
-                  <GlassInput
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    readOnly
-                    className="cursor-not-allowed opacity-75"
-                    placeholder="you@example.com"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="linkedin" className="text-sm font-medium text-zinc-400">
-                    LinkedIn
-                  </label>
-                  <GlassInput
-                    id="linkedin"
-                    prefixText="linkedin.com/in/"
-                    value={stripLinkedInPrefix(formData.linkedin)}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        linkedin: e.target.value
-                          ? `https://linkedin.com/in/${e.target.value}`
-                          : "",
-                      }))
-                    }
-                    placeholder="username"
-                  />
-                </div>
+              {/* Row 2: Email full width */}
+              <div className="space-y-1.5">
+                <label htmlFor="email" className="block text-sm font-medium text-zinc-400">
+                  Email
+                </label>
+                <GlassInput
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  readOnly
+                  className="w-full cursor-not-allowed opacity-75"
+                  placeholder="you@example.com"
+                />
+              </div>
+
+              {/* Row 3: Headline */}
+              <div className="space-y-1.5">
+                <label htmlFor="headline" className="block text-sm font-medium text-zinc-400">
+                  Headline
+                </label>
+                <GlassInput
+                  id="headline"
+                  icon={<Briefcase className="h-5 w-5" />}
+                  value={formData.headline}
+                  onChange={handleChange("headline")}
+                  placeholder="e.g. Senior Software Engineer"
+                />
+              </div>
+
+              {/* Row 4: Location */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-zinc-400">
+                  Location
+                </label>
+                <LocationGrid
+                  type="residence"
+                  value={formData.residence}
+                  onChange={(v) => setFormData((prev) => ({ ...prev, residence: v }))}
+                />
+              </div>
+
+              {/* Row 5: LinkedIn */}
+              <div className="space-y-1.5">
+                <label htmlFor="linkedin" className="block text-sm font-medium text-zinc-400">
+                  LinkedIn
+                </label>
+                <GlassInput
+                  id="linkedin"
+                  prefixText="linkedin.com/in/"
+                  value={stripLinkedInPrefix(formData.linkedin)}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      linkedin: e.target.value
+                        ? `https://linkedin.com/in/${e.target.value}`
+                        : "",
+                    }))
+                  }
+                  placeholder="username"
+                />
               </div>
             </div>
           </div>
@@ -558,6 +637,7 @@ export function EditProfileModal() {
             </div>
           </div>
         )}
+        </div>
 
         <ModalFooter onClose={handleClose} isSubmitting={isSubmitting} />
         </form>
@@ -574,7 +654,7 @@ function ModalFooter({
   isSubmitting: boolean;
 }) {
   return (
-    <div className="flex justify-end gap-3 border-t border-zinc-800 px-6 py-4">
+    <div className="flex shrink-0 justify-end gap-3 border-t border-zinc-800 px-6 py-4">
       <button
         type="button"
         onClick={onClose}

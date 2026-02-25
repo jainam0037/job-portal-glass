@@ -20,7 +20,7 @@ export async function getUser() {
   return apiFetch<{ user: User }>("/user");
 }
 
-/** POST /user/info - name, linkedin, links */
+/** POST /user/info - first_name, last_name, linkedin, links */
 export async function updateInfo(data: Info) {
   return apiFetch<{ info: Info }>("/user/info", {
     method: "POST",
