@@ -1,12 +1,13 @@
 import { create } from "zustand";
 import { isApiSuccess, getApiErrorMessage } from "@/lib/validations/api";
-import type {
-  User,
-  WorkItem,
-  EducationItem,
-  Location,
-  Preference,
-  Info,
+import {
+  normalizeUser,
+  type User,
+  type WorkItem,
+  type EducationItem,
+  type Location,
+  type Preference,
+  type Info,
 } from "@/lib/validations/user";
 import { userService } from "@/services/userService";
 
@@ -38,8 +39,11 @@ interface ProfileState {
   removeEducationLocal: (id: string) => void;
   clearProfile: () => void;
 
-  /** Set minimal user after auth (name, email) until fetchUser runs */
-  setUserFromAuth: (data: { name: string; email: string }) => void;
+  /** Set minimal user after auth until fetchUser runs. Accepts name or first_name+last_name. */
+  setUserFromAuth: (data: { name?: string; first_name?: string; last_name?: string; email: string }) => void;
+
+  /** Mark onboarding complete (optimistic update when user finishes step 4). */
+  setOnboardingComplete: () => void;
 }
 
 export const useProfileStore = create<ProfileState>((set, get) => ({
@@ -64,7 +68,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       // Map backend field variants → our schema (profile_img, resume)
       const profile_img = (raw.profile_img ?? raw.url_to_img ?? raw.profile ?? user.profile_img) as string | null | undefined;
       const resume = (raw.resume ?? raw.resume_url ?? user.resume) as string | null | undefined;
-      // Normalize _id → id (MongoDB/backend often returns _id)
+      // Normalize _id → id for nested items (MongoDB/backend often returns _id)
       const experience = (user.experience ?? []).map((w) => ({
         ...w,
         id: w.id ?? (w as unknown as { _id?: string })._id ?? String(Math.random()),
@@ -73,8 +77,10 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         ...e,
         id: e.id ?? (e as unknown as { _id?: string })._id ?? String(Math.random()),
       }));
+      // Normalize top-level user: _id → id, first_name + last_name → name
+      const normalized = normalizeUser(raw);
       set({
-        user: { ...user, profile_img: profile_img ?? null, resume: resume ?? null, experience, education },
+        user: { ...normalized, profile_img: profile_img ?? null, resume: resume ?? null, experience, education },
         error: null,
       });
     } else {
@@ -171,16 +177,27 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
 
   setUserFromAuth: (data) => {
     const { user } = get();
+    const first = data.first_name ?? "";
+    const last = data.last_name ?? "";
+    const name = (`${first} ${last}`.trim() || data.name) ?? "";
+    const normalized = {
+      id: user?.id ?? "temp",
+      name: name || "User",
+      first_name: first || undefined,
+      last_name: last || undefined,
+      email: data.email,
+    };
     if (user) {
-      set({ user: { ...user, name: data.name, email: data.email } });
+      set({ user: { ...user, ...normalized } });
     } else {
-      set({
-        user: {
-          id: "temp",
-          name: data.name,
-          email: data.email,
-        } as User,
-      });
+      set({ user: { ...normalized } as User });
+    }
+  },
+
+  setOnboardingComplete: () => {
+    const { user } = get();
+    if (user) {
+      set({ user: { ...user, is_onboarded: true } });
     }
   },
 }));

@@ -6,6 +6,7 @@ import { FileUp, MessageCircle, GraduationCap, Briefcase, Trash2, Plus, CheckCir
 import { MonthYearPicker } from "@/components/ui/MonthYearPicker";
 import { CountrySelect } from "@/components/ui/CountrySelect";
 import { userService } from "@/services/userService";
+import { useProfileStore } from "@/store/useProfileStore";
 import { isApiSuccess, getApiErrorMessage, type ApiError } from "@/lib/validations/api";
 
 const inputClass =
@@ -63,6 +64,7 @@ const initialExperienceEntry = (): ExperienceEntry => ({
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const setOnboardingComplete = useProfileStore((s) => s.setOnboardingComplete);
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -272,6 +274,7 @@ export default function OnboardingPage() {
   };
 
   const handleGoToDashboard = () => {
+    setOnboardingComplete();
     router.push("/profile");
   };
 

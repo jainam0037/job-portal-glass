@@ -14,6 +14,7 @@ import { getCountryCode } from "@/lib/constants/countries";
 import { SUGGESTED_SKILLS, SUGGESTED_LANGUAGES } from "@/lib/constants/data";
 import { parseCurrencyString } from "@/components/ui/CurrencyStringInput";
 import { SearchableTimezoneSelect } from "@/components/ui/SearchableTimezoneSelect";
+import { splitFullName } from "@/lib/validations/user";
 import { useProfileStore, type User, type EditingSection } from "@/store/useProfileStore";
 import { userService } from "@/services/userService";
 import { isApiSuccess, getApiErrorMessage } from "@/lib/validations/api";
@@ -65,9 +66,7 @@ function userToFormData(user: User | null): FormData {
     };
   }
   const headline = user.experience?.[0]?.role ?? "";
-  const nameParts = (user.name ?? "").trim().split(/\s+/);
-  const fallbackFirst = nameParts[0] ?? "";
-  const fallbackLast = nameParts.slice(1).join(" ") ?? "";
+  const { first_name: fallbackFirst, last_name: fallbackLast } = splitFullName(user.name ?? "");
   return {
     firstName: user.first_name ?? fallbackFirst,
     lastName: user.last_name ?? fallbackLast,

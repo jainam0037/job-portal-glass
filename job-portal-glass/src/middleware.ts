@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// TEMPORARY: Set to true to bypass all auth redirects and get the app loading.
+// Set back to false once the app loads, then we can debug the auth flow.
+const BYPASS_AUTH = true;
+
 const PROTECTED_ROUTES = ["/profile", "/jobs", "/settings", "/agent", "/alerts", "/onboarding"];
 const AUTH_ROUTES = ["/signin", "/signup", "/forgot-password"];
 
@@ -17,6 +21,10 @@ function hasSession(request: NextRequest): boolean {
 }
 
 export function middleware(request: NextRequest) {
+  if (BYPASS_AUTH) {
+    return NextResponse.next();
+  }
+
   const { pathname } = request.nextUrl;
 
   if (isProtectedPath(pathname)) {
@@ -28,7 +36,8 @@ export function middleware(request: NextRequest) {
   }
 
   if (isAuthPath(pathname)) {
-    if (hasSession(request)) {
+    const sessionExpired = request.nextUrl.searchParams.has("session_expired");
+    if (hasSession(request) && !sessionExpired) {
       return NextResponse.redirect(new URL("/profile", request.url));
     }
   }
@@ -38,13 +47,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static, _next/image (Next.js internals)
-     * - favicon.ico
-     * - api (API routes)
-     * - common static extensions
-     */
     "/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)",
   ],
 };

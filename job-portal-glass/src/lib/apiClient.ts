@@ -4,9 +4,12 @@
  * - Sends credentials (JWT cookies) with every request
  * - Sets Content-Type: application/json unless body is FormData
  * - Returns ApiResponse<T> or standard ApiError on network failure
+ * - Handles 401 (Unauthorized): clears auth state, redirects to /signin
+ * - Handles 429 (Rate Limited): returns user-friendly error message
  */
 
 import type { ApiError, ApiResponse } from "@/lib/validations/api";
+import { triggerUnauthorized } from "@/lib/authHandlers";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
 
@@ -75,6 +78,30 @@ export async function apiFetch<T>(
 
     if (!res.ok) {
       const apiError = json as { success?: boolean; data?: { error?: unknown } };
+
+      // 401 Unauthorized: clear auth state and redirect to signin
+      if (res.status === 401) {
+        if (typeof window !== "undefined") {
+          triggerUnauthorized();
+        }
+        return {
+          success: false,
+          data: {
+            error: "Session expired. Please sign in again.",
+          },
+        } as ApiError;
+      }
+
+      // 429 Too Many Requests: user-friendly rate limit message
+      if (res.status === 429) {
+        return {
+          success: false,
+          data: {
+            error: "Too many attempts. Please try again in a few minutes.",
+          },
+        } as ApiError;
+      }
+
       return {
         success: false,
         data: {

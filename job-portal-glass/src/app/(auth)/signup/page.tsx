@@ -62,7 +62,8 @@ export default function SignupPage() {
         otp,
       });
       setUserFromAuth({
-        name: `${trimmedFirstName} ${trimmedLastName}`.trim(),
+        first_name: trimmedFirstName,
+        last_name: trimmedLastName,
         email: trimmedEmail,
       });
       router.push("/onboarding");

@@ -24,7 +24,8 @@ export default function SigninPage() {
       await signin({ email: email.trim(), password });
       setUserFromAuth({
         email: email.trim(),
-        name: email.trim().split("@")[0] || "User",
+        first_name: email.trim().split("@")[0] || "User",
+        last_name: "",
       });
       router.push("/profile");
     } catch (err) {

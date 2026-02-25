@@ -124,9 +124,11 @@ export type UpdateEducationPayload = z.infer<typeof updateEducationPayloadSchema
 
 // ─── Full User (GET /user response) ────────────────────────────────────────
 
+/** Raw backend may return _id; we normalize to id. first_name/last_name → name. */
 export const userSchema = z.object({
-  id: z.string(),
-  name: z.string().optional(),
+  id: z.string().optional(), // normalized from _id or id
+  _id: z.string().optional(), // raw from backend (MongoDB)
+  name: z.string().optional(), // computed: first_name + last_name
   first_name: z.string().optional(),
   last_name: z.string().optional(),
   email: z.string().email(),
@@ -153,6 +155,8 @@ export const userSchema = z.object({
   // Nested arrays from GET /user
   education: z.array(educationItemSchema).optional(),
   experience: z.array(workItemSchema).optional(),
+  // Onboarding: backend may use is_onboarded, is_onboarding_completed, or similar
+  is_onboarded: z.boolean().optional(),
 });
 
 export type User = z.infer<typeof userSchema>;
@@ -173,6 +177,47 @@ export function getDisplayName(user: { name?: string; first_name?: string; last_
   const fromFirstLast = `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim();
   if (fromFirstLast) return fromFirstLast;
   return user.name ?? "";
+}
+
+/** Normalize raw backend user to frontend shape. Ensures id, name, and is_onboarded are set. */
+export function normalizeUser(raw: Record<string, unknown>): User {
+  const first = (raw.first_name as string) ?? "";
+  const last = (raw.last_name as string) ?? "";
+  const name = (`${first} ${last}`.trim() || (raw.name as string)) ?? "";
+  const id = (raw.id as string) ?? (raw._id as string) ?? "";
+  // Infer onboarding: backend flag, or has education (completed step 2+)
+  const education = raw.education as unknown[] | undefined;
+  const isOnboarded =
+    raw.is_onboarded === true ||
+    raw.is_onboarding_completed === true ||
+    (Array.isArray(education) && education.length > 0);
+
+  return {
+    ...raw,
+    id: id || "unknown",
+    name: name || "User",
+    first_name: first || undefined,
+    last_name: last || undefined,
+    _id: (raw._id as string) ?? undefined,
+    is_onboarded: isOnboarded,
+  } as User;
+}
+
+/**
+ * Split a single "Full Name" string into first_name and last_name.
+ * first_name: everything before the first space.
+ * last_name: everything after the first space (or empty if no space).
+ */
+export function splitFullName(fullName: string): { first_name: string; last_name: string } {
+  const trimmed = (fullName ?? "").trim();
+  const spaceIdx = trimmed.indexOf(" ");
+  if (spaceIdx === -1) {
+    return { first_name: trimmed, last_name: "" };
+  }
+  return {
+    first_name: trimmed.slice(0, spaceIdx),
+    last_name: trimmed.slice(spaceIdx + 1).trim(),
+  };
 }
 
 /** POST /user/profile response – upload profile image returns profile_img URL */
