@@ -20,9 +20,14 @@ function isFormData(body: unknown): body is FormData {
   return body instanceof FormData;
 }
 
+/** Options for apiFetch - body can be FormData or a JSON-serializable object */
+type ApiFetchOptions = Omit<RequestInit, "body"> & {
+  body?: BodyInit | Record<string, unknown> | null;
+};
+
 export async function apiFetch<T>(
   endpoint: string,
-  options?: RequestInit
+  options?: ApiFetchOptions
 ): Promise<ApiResponse<T>> {
   const url = buildUrl(endpoint);
   const { body, headers: customHeaders, ...rest } = options ?? {};

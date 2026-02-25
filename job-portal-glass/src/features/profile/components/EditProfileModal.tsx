@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { X, User, Briefcase, Globe, Shield, CheckCircle2, XCircle, MinusCircle } from "lucide-react";
+import { X, User as UserIcon, Briefcase, Globe, Shield, CheckCircle2, XCircle, MinusCircle } from "lucide-react";
 import { GlassInput } from "@/components/ui/GlassInput";
 import { GlassButton } from "@/components/ui/GlassButton";
 import { CreatablePillInput } from "@/components/ui/CreatablePillInput";
@@ -23,6 +23,12 @@ function stripLinkedInPrefix(url: string): string {
     ?.replace(/^https?:\/\//, "")
     .replace(/^linkedin\.com\/in\/?/, "")
     .replace(/\/$/, "") ?? "";
+}
+
+function stripEmpty<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined && v !== null && v !== "")
+  ) as Partial<T>;
 }
 
 type FormData = {
@@ -208,6 +214,7 @@ export function EditProfileModal() {
       try {
         switch (activeTab) {
           case "profile": {
+            // Basic tab: ONLY /info and /location — never /preference
             const linkedinVal = formData.linkedin?.trim();
             const linkedinUrl = linkedinVal
               ? (linkedinVal.startsWith("http")
@@ -223,33 +230,27 @@ export function EditProfileModal() {
             };
 
             const residenceCountryIso = getCountryCode(formData.residence.country);
-            const locationPayload = {
+            const locationPayload = stripEmpty({
               country_residence: residenceCountryIso || undefined,
               state_residence: formData.residence.state?.trim() || undefined,
               city_residence: formData.residence.city?.trim() || undefined,
-              work_country: getCountryCode(user?.work_country ?? "") || undefined,
-              work_state: user?.work_state ?? undefined,
-              work_city: user?.work_city ?? undefined,
-              timezone: user?.timezone ?? undefined,
-              legally_authorised_to_work: user?.legally_authorised_to_work,
-            };
+            });
 
-            const [infoRes, locationRes] = await Promise.all([
-              userService.updateInfo(infoPayload),
-              userService.updateLocation(locationPayload),
-            ]);
-
+            const infoRes = await userService.updateInfo(infoPayload);
             if (!isApiSuccess(infoRes)) {
               setSaveError(getApiErrorMessage(infoRes.data));
               return;
             }
-            if (!isApiSuccess(locationRes)) {
-              setSaveError(getApiErrorMessage(locationRes.data));
-              return;
-            }
-
             setUserInfo(infoPayload);
-            setUserLocation(locationPayload);
+
+            if (Object.keys(locationPayload).length > 0) {
+              const locationRes = await userService.updateLocation(locationPayload);
+              if (!isApiSuccess(locationRes)) {
+                setSaveError(getApiErrorMessage(locationRes.data));
+                return;
+              }
+              setUserLocation(locationPayload);
+            }
 
             if (formData.headline && user?.experience?.[0]) {
               const exp = { ...user.experience[0], role: formData.headline };
@@ -268,11 +269,11 @@ export function EditProfileModal() {
           }
 
           case "skills": {
+            // Skills tab: ONLY /preference (skills + languages)
             const preferencePayload = {
               skills: skillsFormData.skills,
               languages: skillsFormData.languages,
             };
-
             const res = await userService.updatePreferences(
               preferencePayload as Parameters<typeof userService.updatePreferences>[0]
             );
@@ -285,47 +286,59 @@ export function EditProfileModal() {
           }
 
           case "work-preferences": {
+            // Work Preferences tab: /location (work) + /preference — explicit payload from state
+            // State binding: workLocation.country -> work_country (ISO), workLocation.state -> work_state, etc.
+            const work_country = getCountryCode(workPrefsFormData.workLocation.country) || undefined;
+            const work_state = workPrefsFormData.workLocation.state?.trim() || undefined;
+            const work_city = workPrefsFormData.workLocation.city?.trim() || undefined;
+            const timezone = workPrefsFormData.timezone?.trim() || undefined;
+            const hours_per_week = workPrefsFormData.timeCommitment?.trim();
+            const hoursNum = hours_per_week ? Number(hours_per_week) : undefined;
             const { amount } = parseCurrencyString(workPrefsFormData.compensation);
-            const compNum = amount ? parseInt(amount, 10) : undefined;
-            const tcParsed = workPrefsFormData.timeCommitment
-              ? parseInt(workPrefsFormData.timeCommitment, 10)
-              : undefined;
-            const tcValid = tcParsed != null && !isNaN(tcParsed) && tcParsed >= 1;
+            const min_compensation = amount ? Number(amount) : undefined;
+            const work_permit =
+              workPrefsFormData.workAuth === "unspecified"
+                ? undefined
+                : workPrefsFormData.workAuth === "authorized";
 
-            const preferencePayload: Record<string, unknown> = {};
-            if (tcValid) preferencePayload.time_commitment_per_week = tcParsed;
-            if (compNum != null && !isNaN(compNum)) preferencePayload.min_compensation_full_time = compNum;
+            const locationPayload = stripEmpty({
+              work_country: work_country || undefined,
+              work_state,
+              work_city,
+              timezone,
+              legally_authorised_to_work: work_permit,
+            });
 
-            const workCountryIso = getCountryCode(workPrefsFormData.workLocation.country);
-            const locationPayload = {
-              work_country: workCountryIso || undefined,
-              work_state: workPrefsFormData.workLocation.state?.trim() || undefined,
-              work_city: workPrefsFormData.workLocation.city?.trim() || undefined,
-              timezone: workPrefsFormData.timezone?.trim() || undefined,
-              legally_authorised_to_work:
-                workPrefsFormData.workAuth === "unspecified"
-                  ? undefined
-                  : workPrefsFormData.workAuth === "authorized",
-            };
+            const preferencePayload = stripEmpty({
+              time_commitment_per_week: hoursNum != null && !isNaN(hoursNum) && hoursNum >= 1 ? hoursNum : undefined,
+              min_compensation_full_time: min_compensation != null && !isNaN(min_compensation) ? min_compensation : undefined,
+              timezone: timezone || undefined,
+            });
 
-            const promises: Promise<unknown>[] = [
-              userService.updateLocation(locationPayload),
-            ];
-            if (Object.keys(preferencePayload).length > 0) {
-              promises.push(
-                userService.updatePreferences(preferencePayload as Parameters<typeof userService.updatePreferences>[0])
-              );
-            }
+            const hasLocationFields = Object.keys(locationPayload).length > 0;
+            const hasPreferenceFields = Object.keys(preferencePayload).length > 0;
 
-            const results = await Promise.all(promises);
-            const failed = results.find((r) => !isApiSuccess(r as { success: boolean; data: unknown }));
-            if (failed && !isApiSuccess(failed as { success: boolean; data: unknown })) {
-              setSaveError(getApiErrorMessage((failed as { data: { error?: unknown } }).data));
+            if (!hasLocationFields && !hasPreferenceFields) {
+              setSaveError("Please fill in at least one field to save.");
               return;
             }
 
-            setUserLocation(locationPayload);
-            if (Object.keys(preferencePayload).length > 0) {
+            if (hasLocationFields) {
+              const locationRes = await userService.updateLocation(locationPayload);
+              if (!isApiSuccess(locationRes)) {
+                setSaveError(getApiErrorMessage(locationRes.data));
+                return;
+              }
+              setUserLocation(locationPayload);
+            }
+            if (hasPreferenceFields) {
+              const prefRes = await userService.updatePreferences(
+                preferencePayload as Parameters<typeof userService.updatePreferences>[0]
+              );
+              if (!isApiSuccess(prefRes)) {
+                setSaveError(getApiErrorMessage(prefRes.data));
+                return;
+              }
               setUserPreferences(preferencePayload as Parameters<typeof setUserPreferences>[0]);
             }
             break;
@@ -424,7 +437,7 @@ export function EditProfileModal() {
                   </label>
                   <GlassInput
                     id="firstName"
-                    icon={<User className="h-5 w-5" />}
+                    icon={<UserIcon className="h-5 w-5" />}
                     value={formData.firstName}
                     onChange={handleChange("firstName")}
                     placeholder="John"
@@ -436,7 +449,7 @@ export function EditProfileModal() {
                   </label>
                   <GlassInput
                     id="lastName"
-                    icon={<User className="h-5 w-5" />}
+                    icon={<UserIcon className="h-5 w-5" />}
                     value={formData.lastName}
                     onChange={handleChange("lastName")}
                     placeholder="Doe"
@@ -559,18 +572,19 @@ export function EditProfileModal() {
                 />
                 <div className="space-y-1.5">
                   <label htmlFor="timeCommitment" className="text-sm font-medium text-zinc-400">
-                    Hours per week
+                    Hours per week <span className="text-zinc-500 font-normal">(optional)</span>
                   </label>
                   <GlassInput
                     id="timeCommitment"
                     type="number"
-                    min={1}
+                    min={0}
                     max={168}
+                    step={1}
                     value={workPrefsFormData.timeCommitment}
                     onChange={(e) =>
                       setWorkPrefsFormData((prev) => ({ ...prev, timeCommitment: e.target.value }))
                     }
-                    placeholder="40"
+                    placeholder="e.g. 40"
                   />
                 </div>
               </div>

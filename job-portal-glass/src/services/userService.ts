@@ -24,7 +24,7 @@ export async function getUser() {
 export async function updateInfo(data: Info) {
   return apiFetch<{ info: Info }>("/user/info", {
     method: "POST",
-    body: data as unknown as Record<string, unknown>,
+    body: data as Record<string, unknown>,
   });
 }
 
@@ -32,7 +32,7 @@ export async function updateInfo(data: Info) {
 export async function updateLocation(data: Location) {
   return apiFetch<{ location: Location }>("/user/location", {
     method: "POST",
-    body: data as unknown as Record<string, unknown>,
+    body: data as Record<string, unknown>,
   });
 }
 
@@ -40,7 +40,7 @@ export async function updateLocation(data: Location) {
 export async function updatePreferences(data: Preference) {
   return apiFetch<{ preferences: Preference }>("/user/preference", {
     method: "POST",
-    body: data as unknown as Record<string, unknown>,
+    body: data as Record<string, unknown>,
   });
 }
 
@@ -48,7 +48,7 @@ export async function updatePreferences(data: Preference) {
 export async function addWork(data: CreateWorkPayload) {
   return apiFetch<WorkResponse>("/user/work/", {
     method: "POST",
-    body: data as unknown as Record<string, unknown>,
+    body: data as Record<string, unknown>,
   });
 }
 
@@ -56,7 +56,7 @@ export async function addWork(data: CreateWorkPayload) {
 export async function updateWork(data: UpdateWorkPayload) {
   return apiFetch<WorkResponse>("/user/work", {
     method: "PUT",
-    body: data as unknown as Record<string, unknown>,
+    body: data as Record<string, unknown>,
   });
 }
 
@@ -71,7 +71,7 @@ export async function deleteWork(id: string) {
 export async function addEducation(data: CreateEducationPayload) {
   return apiFetch<EducationResponse>("/user/education", {
     method: "POST",
-    body: data as unknown as Record<string, unknown>,
+    body: data as Record<string, unknown>,
   });
 }
 
@@ -79,7 +79,7 @@ export async function addEducation(data: CreateEducationPayload) {
 export async function updateEducation(data: UpdateEducationPayload) {
   return apiFetch<EducationResponse>("/user/education", {
     method: "PUT",
-    body: data as unknown as Record<string, unknown>,
+    body: data as Record<string, unknown>,
   });
 }
 

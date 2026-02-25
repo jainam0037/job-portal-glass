@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 /**
@@ -15,7 +15,7 @@ import { useRouter, useSearchParams } from "next/navigation";
  */
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<"loading" | "error">("loading");
@@ -60,5 +60,22 @@ export default function AuthCallbackPage() {
         <p className="mt-4 text-zinc-400">Completing sign in…</p>
       </div>
     </main>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-black text-white flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-zinc-600 border-t-white" />
+            <p className="mt-4 text-zinc-400">Completing sign in…</p>
+          </div>
+        </main>
+      }
+    >
+      <AuthCallbackContent />
+    </Suspense>
   );
 }
