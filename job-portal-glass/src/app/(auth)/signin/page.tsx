@@ -5,12 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GlassInput } from "@/components/ui/GlassInput";
 import { SocialButtons } from "@/components/auth/SocialButtons";
-import { signin } from "@/services/authService";
+import { signin, RateLimitError } from "@/services/authService";
 import { useProfileStore } from "@/store/useProfileStore";
+import { useRateLimit } from "@/hooks/useRateLimit";
 
 export default function SigninPage() {
   const router = useRouter();
   const setUserFromAuth = useProfileStore((s) => s.setUserFromAuth);
+  const { isRateLimited, cooldownSeconds, triggerRateLimit } = useRateLimit();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +31,12 @@ export default function SigninPage() {
       });
       router.push("/profile");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid credentials. Please try again.");
+      if (err instanceof RateLimitError) {
+        triggerRateLimit(err.retryAfter ?? 60);
+        setError(err.message);
+      } else {
+        setError(err instanceof Error ? err.message : "Invalid credentials. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -76,7 +83,7 @@ export default function SigninPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                disabled={isLoading}
+                disabled={isLoading || isRateLimited}
               />
             </div>
 
@@ -92,7 +99,7 @@ export default function SigninPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                disabled={isLoading}
+                disabled={isLoading || isRateLimited}
               />
             </div>
 
@@ -105,11 +112,15 @@ export default function SigninPage() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isRateLimited}
               className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed border-none transition-all"
               suppressHydrationWarning
             >
-              {isLoading ? "Signing in…" : "Sign In"}
+              {isRateLimited
+                ? `Try again in ${cooldownSeconds}s…`
+                : isLoading
+                  ? "Signing in…"
+                  : "Sign In"}
             </button>
           </form>
 

@@ -11,6 +11,17 @@ export interface ApiResponse<T> {
   data: T | { error: string | Record<string, unknown> };
 }
 
+/** Thrown when API returns 429 Too Many Requests. Components can catch and show cooldown UI. */
+export class RateLimitError extends Error {
+  constructor(
+    message = "Too many attempts. Please try again in a few minutes.",
+    public readonly retryAfter?: number
+  ) {
+    super(message);
+    this.name = "RateLimitError";
+  }
+}
+
 /** Extract error message from API response. Handles string or object (e.g. { email: "invalid" }). */
 function getErrorMessage(data: { error?: string | Record<string, unknown> }): string {
   const err = data.error;
@@ -23,6 +34,15 @@ function getErrorMessage(data: { error?: string | Record<string, unknown> }): st
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
+  if (res.status === 429) {
+    let retryAfter = 60;
+    const header = res.headers.get("Retry-After");
+    if (header) {
+      const parsed = parseInt(header, 10);
+      if (!isNaN(parsed)) retryAfter = parsed;
+    }
+    throw new RateLimitError("Too many attempts. Please try again in a few minutes.", retryAfter);
+  }
   const json: ApiResponse<T> = await res.json();
   if (!json.success) {
     const msg = getErrorMessage((json.data || {}) as { error?: string | Record<string, unknown> });

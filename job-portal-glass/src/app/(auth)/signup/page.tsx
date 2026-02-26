@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import { Mail, Hash, User, Lock, ArrowLeft } from "lucide-react";
 import { GlassInput } from "@/components/ui/GlassInput";
 import { SocialButtons } from "@/components/auth/SocialButtons";
-import { reqEmailOtp, signup } from "@/services/authService";
+import { reqEmailOtp, signup, RateLimitError } from "@/services/authService";
 import { useProfileStore } from "@/store/useProfileStore";
+import { useRateLimit } from "@/hooks/useRateLimit";
 
 export default function SignupPage() {
   const router = useRouter();
   const setUserFromAuth = useProfileStore((s) => s.setUserFromAuth);
+  const { isRateLimited, cooldownSeconds, triggerRateLimit } = useRateLimit();
   const [step, setStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -32,7 +34,12 @@ export default function SignupPage() {
       setEmail(trimmed);
       setStep(2);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send OTP. Please try again.");
+      if (err instanceof RateLimitError) {
+        triggerRateLimit(err.retryAfter ?? 60);
+        setError(err.message);
+      } else {
+        setError(err instanceof Error ? err.message : "Failed to send OTP. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -68,7 +75,12 @@ export default function SignupPage() {
       });
       router.push("/onboarding");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign up failed. Please try again.");
+      if (err instanceof RateLimitError) {
+        triggerRateLimit(err.retryAfter ?? 60);
+        setError(err.message);
+      } else {
+        setError(err instanceof Error ? err.message : "Sign up failed. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -121,17 +133,21 @@ export default function SignupPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || isRateLimited}
                   className="bg-black/40 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                 />
               </div>
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || isRateLimited}
                 className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/20 hover:from-blue-500 hover:to-indigo-500 hover:shadow-blue-500/40 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                 suppressHydrationWarning
               >
-                {isLoading ? "Sending…" : "Verify Email"}
+                {isRateLimited
+                  ? `Try again in ${cooldownSeconds}s…`
+                  : isLoading
+                    ? "Sending…"
+                    : "Verify Email"}
               </button>
             </form>
           ) : (
@@ -167,7 +183,7 @@ export default function SignupPage() {
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || isRateLimited}
                   className="bg-black/40 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                 />
               </div>
@@ -185,7 +201,7 @@ export default function SignupPage() {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     required
-                    disabled={isLoading}
+                    disabled={isLoading || isRateLimited}
                     className="bg-black/40 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                   />
                 </div>
@@ -201,7 +217,7 @@ export default function SignupPage() {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     required
-                    disabled={isLoading}
+                    disabled={isLoading || isRateLimited}
                     className="bg-black/40 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                   />
                 </div>
@@ -220,7 +236,7 @@ export default function SignupPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || isRateLimited}
                   minLength={8}
                   className="bg-black/40 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                 />
@@ -228,11 +244,15 @@ export default function SignupPage() {
 
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || isRateLimited}
                 className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/20 hover:from-blue-500 hover:to-indigo-500 hover:shadow-blue-500/40 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                 suppressHydrationWarning
               >
-                {isLoading ? "Creating…" : "Create Account"}
+                {isRateLimited
+                  ? `Try again in ${cooldownSeconds}s…`
+                  : isLoading
+                    ? "Creating…"
+                    : "Create Account"}
               </button>
             </form>
           )}

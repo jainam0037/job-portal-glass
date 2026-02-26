@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// TEMPORARY: Set to true to bypass all auth redirects and get the app loading.
-// Set back to false once the app loads, then we can debug the auth flow.
-const BYPASS_AUTH = true;
-
 const PROTECTED_ROUTES = ["/profile", "/jobs", "/settings", "/agent", "/alerts", "/onboarding"];
 const AUTH_ROUTES = ["/signin", "/signup", "/forgot-password"];
 
@@ -20,11 +16,7 @@ function hasSession(request: NextRequest): boolean {
   return Boolean(request.cookies.get("session_token")?.value);
 }
 
-export function middleware(request: NextRequest) {
-  if (BYPASS_AUTH) {
-    return NextResponse.next();
-  }
-
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (isProtectedPath(pathname)) {
