@@ -23,7 +23,7 @@ export default function LandingPage() {
       {/* Navbar */}
       <header className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-white/5 bg-[#09090b]/50 backdrop-blur-md">
         <Link href="/" className="font-bold tracking-tight text-white">
-          Nexus
+          Adzzat
         </Link>
         <nav className="flex items-center gap-6">
           <Link
