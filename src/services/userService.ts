@@ -124,6 +124,19 @@ export async function deleteProfileImage() {
   });
 }
 
+/** GET /user/notifications – list of user notifications (auth required) */
+export interface Notification {
+  _id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  date: string;
+}
+
+export async function getNotifications() {
+  return apiFetch<{ notifications: Notification[] }>("/user/notifications");
+}
+
 // Response types per API contract
 interface WorkResponse {
   id: string;
@@ -162,4 +175,5 @@ export const userService = {
   deleteResume,
   uploadProfileImage,
   deleteProfileImage,
+  getNotifications,
 };

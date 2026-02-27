@@ -6,6 +6,7 @@ import { Menu, X, MessageCircleMore } from "lucide-react";
 
 import { GlassButton } from "../ui/GlassButton";
 import { UserDropdown } from "../ui/UserDropdown";
+// import { NotificationsDropdown } from "./NotificationsDropdown";
 import { useProfileStore } from "@/store/useProfileStore";
 
 export function GlassNavbar() {
@@ -48,9 +49,12 @@ export function GlassNavbar() {
             </Link>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {isLoggedIn ? (
-              <UserDropdown />
+              <>
+                {/* <NotificationsDropdown /> */}
+                <UserDropdown />
+              </>
             ) : (
               <>
                 <Link href="/signin">
@@ -105,7 +109,8 @@ export function GlassNavbar() {
 
             <div className="flex flex-col gap-2">
               {isLoggedIn ? (
-                <div className="flex justify-end px-2" onClick={close}>
+                <div className="flex items-center justify-end gap-2 px-2" onClick={close}>
+                  {/* <NotificationsDropdown /> */}
                   <UserDropdown />
                 </div>
               ) : (

@@ -47,7 +47,7 @@ export default function LandingPage() {
           ✨ The new standard for tech hiring
         </div>
         <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-6">
-          Don&apos;t apply. Be queried.
+          Don&apos;t apply. TEST REFRESH WORKS.
         </h1>
         <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed">
           Stop throwing PDF resumes into the void. Build a pristine digital

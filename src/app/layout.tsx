@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { AuthGuardProvider } from "@/components/guards/AuthGuardProvider";
+// import { ReferralTracker } from "@/components/ReferralTracker";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,7 +25,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          <AuthGuardProvider>{children}</AuthGuardProvider>
+          <AuthGuardProvider>
+            {/* <ReferralTracker /> */}
+            {children}
+          </AuthGuardProvider>
         </ThemeProvider>
       </body>
     </html>

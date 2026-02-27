@@ -82,6 +82,8 @@ export interface SignupPayload {
   email: string;
   password: string;
   otp: string;
+  /** Optional referral code (e.g. user id) from the referrer. Injected from localStorage when present. */
+  referred_by?: string;
 }
 
 /** POST /auth/signup – Complete signup with OTP. Returns user + cookies (logged in). */

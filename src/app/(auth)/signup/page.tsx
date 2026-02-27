@@ -61,13 +61,20 @@ export default function SignupPage() {
     setError(null);
     setIsLoading(true);
     try {
-      await signup({
+      // Phase 2 Referral System - disabled for Phase 1
+      // const referredBy = typeof window !== "undefined" ? localStorage.getItem("adzzat_referred_by") : null;
+      const payload = {
         first_name: trimmedFirstName,
         last_name: trimmedLastName,
         email: trimmedEmail,
         password,
         otp,
-      });
+        // ...(referredBy ? { referred_by: referredBy } : {}),
+      };
+      await signup(payload);
+      // if (typeof window !== "undefined") {
+      //   localStorage.removeItem("adzzat_referred_by");
+      // }
       setUserFromAuth({
         first_name: trimmedFirstName,
         last_name: trimmedLastName,

@@ -15,8 +15,26 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* THIS IS THE PLAIN SCRIPT CURSOR SUGGESTED */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              console.log("🔥 PLAIN HTML SCRIPT LOADED BEFORE REACT!");
+              const params = new URLSearchParams(window.location.search);
+              const ref = params.get('ref');
+              if (ref) {
+                localStorage.setItem('adzzat_referred_by', ref);
+                console.log('✅ PLAIN SCRIPT SAVED REF:', ref);
+              }
+            `,
+          }}
+        />
+      </head>
       <body className="antialiased" suppressHydrationWarning>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+        
+
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthGuardProvider>{children}</AuthGuardProvider>
         </ThemeProvider>
       </body>

@@ -82,6 +82,7 @@ export interface SignupPayload {
   email: string;
   password: string;
   otp: string;
+  referred_by?: string;
 }
 
 /** POST /auth/signup – Complete signup with OTP. Returns user + cookies (logged in). */

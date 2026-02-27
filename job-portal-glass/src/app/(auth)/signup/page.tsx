@@ -61,13 +61,21 @@ export default function SignupPage() {
     setError(null);
     setIsLoading(true);
     try {
-      await signup({
+      const payload: Parameters<typeof signup>[0] = {
         first_name: trimmedFirstName,
         last_name: trimmedLastName,
         email: trimmedEmail,
         password,
         otp,
-      });
+      };
+      const storedRef = typeof window !== "undefined" ? localStorage.getItem("adzzat_referred_by") : null;
+      if (storedRef?.trim()) {
+        payload.referred_by = storedRef.trim();
+      }
+      await signup(payload);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("adzzat_referred_by");
+      }
       setUserFromAuth({
         first_name: trimmedFirstName,
         last_name: trimmedLastName,

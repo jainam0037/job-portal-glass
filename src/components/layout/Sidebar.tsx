@@ -8,6 +8,7 @@ import {
   Bot,
   Bell,
   Settings,
+  Gift,
   type LucideIcon,
 } from "lucide-react";
 import { UserDropdown } from "@/components/ui/UserDropdown";
@@ -92,6 +93,14 @@ export function Sidebar() {
           label="Profile"
           isActive={pathname === "/profile"}
         />
+        {/* Phase 2 Referral System - disabled for Phase 1
+        <SidebarLink
+          href="/referrals"
+          icon={Gift}
+          label="Referrals"
+          isActive={pathname === "/referrals"}
+        />
+        */}
       </div>
 
       {/* Divider */}
@@ -111,12 +120,14 @@ export function Sidebar() {
 
       {/* Utilities - Bottom */}
       <div className="mt-auto flex flex-col items-center gap-1">
+        {/* Phase 2 Referral System - disabled for Phase 1
         <SidebarLink
           href="/notifications"
           icon={Bell}
           label="Alerts"
           isActive={pathname === "/notifications"}
         />
+        */}
         <SidebarLink
           href="/settings"
           icon={Settings}

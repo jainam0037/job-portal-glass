@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Linkedin } from "lucide-react";
 import { getSocialLink, type SocialProvider } from "@/services/authService";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+
 function GoogleIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -47,6 +49,23 @@ export function SocialButtons() {
     }
   };
 
+  const handleGoogleClick = async () => {
+    setError(null);
+    setLoadingProvider("google");
+    try {
+      const res = await fetch(`${API_BASE}/auth/google`, { credentials: "include" });
+      const parsed = await res.json();
+      const url = parsed?.data?.url ?? parsed?.url;
+      if (!url || typeof url !== "string") {
+        throw new Error("No redirect URL received");
+      }
+      window.location.href = url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to start Google login.");
+      setLoadingProvider(null);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {error && (
@@ -60,14 +79,14 @@ export function SocialButtons() {
       <div className="flex flex-col gap-3">
         <button
           type="button"
-          onClick={() => handleSocialClick("google")}
+          onClick={handleGoogleClick}
           disabled={!!loadingProvider}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-black shadow-sm transition-colors hover:bg-gray-100 border border-gray-200 disabled:opacity-60 disabled:cursor-not-allowed"
           suppressHydrationWarning
         >
           <GoogleIcon className="h-5 w-5 shrink-0" />
           <span>
-            {loadingProvider === "google" ? "Redirecting…" : "Continue with Google"}
+            {loadingProvider === "google" ? "Loading…" : "Continue with Google"}
           </span>
         </button>
 
