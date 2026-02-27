@@ -22,13 +22,12 @@ export default function DashboardLayout({
     fetchUser();
   }, [fetchUser]);
 
-  // Onboarding redirect guard (only after we have user data)
+  // Onboarding redirect: if already onboarded and on onboarding page, go to profile.
+  // Onboarding is optional - we no longer force non-onboarded users to /onboarding.
   useEffect(() => {
     if (isFetching || !user) return;
     if (user.is_onboarded === true && isOnboardingPage) {
       router.replace("/profile");
-    } else if (user.is_onboarded !== true && !isOnboardingPage) {
-      router.replace("/onboarding");
     }
   }, [user, isFetching, isOnboardingPage, router]);
 

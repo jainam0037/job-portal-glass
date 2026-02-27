@@ -49,7 +49,7 @@ export default function LandingPage() {
               href="/signup"
               className="rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-black shadow-sm transition-all hover:bg-zinc-100 hover:shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090b]"
             >
-              Join Beta
+              Sign Up
             </Link>
           </nav>
         </div>

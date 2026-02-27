@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { FileUp, MessageCircle, GraduationCap, Briefcase, Trash2, Plus, CheckCircle } from "lucide-react";
 import { MonthYearPicker } from "@/components/ui/MonthYearPicker";
 import { CountrySelect } from "@/components/ui/CountrySelect";
@@ -63,7 +62,6 @@ const initialExperienceEntry = (): ExperienceEntry => ({
 });
 
 export default function OnboardingPage() {
-  const router = useRouter();
   const setOnboardingComplete = useProfileStore((s) => s.setOnboardingComplete);
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
@@ -129,11 +127,6 @@ export default function OnboardingPage() {
     } else {
       setError("Please select a PDF file to upload.");
     }
-  };
-
-  const handleSkipResume = () => {
-    setError(null);
-    setStep(2);
   };
 
   const updateEducation = (index: number, field: keyof EducationEntry, value: string | null) => {
@@ -275,7 +268,11 @@ export default function OnboardingPage() {
 
   const handleGoToDashboard = () => {
     setOnboardingComplete();
-    router.push("/profile");
+    window.location.href = "/profile";
+  };
+
+  const handleSkipOnboarding = () => {
+    window.location.href = "/profile";
   };
 
   const isIIT = educationList.some((edu) =>
@@ -352,7 +349,7 @@ export default function OnboardingPage() {
               </label>
             </div>
 
-            <div className="mt-6 flex flex-col gap-3">
+            <div className="mt-6">
               <button
                 type="button"
                 onClick={handleUploadAndContinue}
@@ -363,9 +360,9 @@ export default function OnboardingPage() {
               </button>
               <button
                 type="button"
-                onClick={handleSkipResume}
+                onClick={handleSkipOnboarding}
                 disabled={isLoading}
-                className="w-full rounded-xl py-3 text-sm text-zinc-500 transition hover:text-zinc-300"
+                className="w-full mt-2 text-sm text-zinc-500 transition hover:text-white"
               >
                 Skip for now
               </button>
