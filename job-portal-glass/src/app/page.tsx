@@ -23,7 +23,7 @@ export default function LandingPage() {
       {/* Navbar */}
       <header className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-white/5 bg-[#09090b]/50 backdrop-blur-md">
         <Link href="/" className="font-bold tracking-tight text-white">
-          Nexus
+          Adzzat
         </Link>
         <nav className="flex items-center gap-6">
           <Link
@@ -36,7 +36,7 @@ export default function LandingPage() {
             href="/signup"
             className="bg-white text-black text-sm font-medium px-4 py-2 rounded-lg hover:bg-zinc-200 transition-colors"
           >
-            Join Beta
+            Sign Up
           </Link>
         </nav>
       </header>
@@ -47,7 +47,7 @@ export default function LandingPage() {
           ✨ The new standard for tech hiring
         </div>
         <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-6">
-          Don&apos;t apply. Be queried.
+          Don&apos;t apply. TEST REFRESH WORKS.
         </h1>
         <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed">
           Stop throwing PDF resumes into the void. Build a pristine digital

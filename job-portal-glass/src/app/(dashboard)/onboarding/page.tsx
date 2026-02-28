@@ -6,7 +6,8 @@ import { FileUp, MessageCircle, GraduationCap, Briefcase, Trash2, Plus, CheckCir
 import { MonthYearPicker } from "@/components/ui/MonthYearPicker";
 import { CountrySelect } from "@/components/ui/CountrySelect";
 import { userService } from "@/services/userService";
-import { isApiSuccess, getApiErrorMessage } from "@/lib/validations/api";
+import { useProfileStore } from "@/store/useProfileStore";
+import { isApiSuccess, getApiErrorMessage, type ApiError } from "@/lib/validations/api";
 
 const inputClass =
   "h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white placeholder:text-zinc-500 outline-none transition-all focus:border-white/20 focus:ring-1 focus:ring-white/20";
@@ -63,6 +64,7 @@ const initialExperienceEntry = (): ExperienceEntry => ({
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const setOnboardingComplete = useProfileStore((s) => s.setOnboardingComplete);
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -228,7 +230,7 @@ export default function OnboardingPage() {
       const eduResults = await Promise.all(eduPromises);
       const failedEdu = eduResults.find((r) => !isApiSuccess(r));
       if (failedEdu) {
-        setError(getApiErrorMessage((failedEdu as { data: unknown }).data));
+        setError(getApiErrorMessage((failedEdu as ApiError).data));
         setIsLoading(false);
         return;
       }
@@ -258,7 +260,7 @@ export default function OnboardingPage() {
       const workResults = await Promise.all(workPromises);
       const failedWork = workResults.find((r) => !isApiSuccess(r));
       if (failedWork) {
-        setError(getApiErrorMessage((failedWork as { data: unknown }).data));
+        setError(getApiErrorMessage((failedWork as ApiError).data));
         setIsLoading(false);
         return;
       }
@@ -272,6 +274,7 @@ export default function OnboardingPage() {
   };
 
   const handleGoToDashboard = () => {
+    setOnboardingComplete();
     router.push("/profile");
   };
 

@@ -16,7 +16,7 @@ function hasSession(request: NextRequest): boolean {
   return Boolean(request.cookies.get("session_token")?.value);
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (isProtectedPath(pathname)) {
@@ -28,7 +28,8 @@ export function middleware(request: NextRequest) {
   }
 
   if (isAuthPath(pathname)) {
-    if (hasSession(request)) {
+    const sessionExpired = request.nextUrl.searchParams.has("session_expired");
+    if (hasSession(request) && !sessionExpired) {
       return NextResponse.redirect(new URL("/profile", request.url));
     }
   }
@@ -38,13 +39,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static, _next/image (Next.js internals)
-     * - favicon.ico
-     * - api (API routes)
-     * - common static extensions
-     */
     "/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)",
   ],
 };
