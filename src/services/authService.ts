@@ -6,6 +6,7 @@
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
 
+
 export interface ApiResponse<T> {
   success: boolean;
   data: T | { error: string | Record<string, unknown> };
